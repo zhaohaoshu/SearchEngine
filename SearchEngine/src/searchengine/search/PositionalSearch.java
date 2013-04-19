@@ -4,11 +4,11 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import searchengine.Posting;
+import searchengine.data.Posting;
 import searchengine.TypeTokenizer;
-import searchengine.gae.GAEDictionary;
-import searchengine.gae.GAEDocumentInfo;
-import searchengine.gae.GAEPostingReader;
+import searchengine.data.DocumentInfo;
+import searchengine.data.PostingReader;
+import searchengine.data.SearchDataManager;
 
 /**
  *
@@ -49,14 +49,16 @@ public class PositionalSearch
 				pointers[count]--;
 	}
 
-	public static void positionalSearch(String queryString, GAEDictionary dictionary, PositionalSearchResultWriter writer)
+	public static <D extends DocumentInfo, R extends PostingReader> void positionalSearch(
+			String queryString, SearchDataManager<D, R> manager,
+			PositionalSearchResultWriter writer)
 	{
 		TypeTokenizer tokenizer = new TypeTokenizer(new StringReader(queryString));
 		tokenizer.addTypes(new String[]
 		{
 			"/", "0123456789"
 		});
-		ArrayList<GAEPostingReader> readers = new ArrayList<>();
+		ArrayList<R> readers = new ArrayList<>();
 		ArrayList<Integer> distances = new ArrayList<>();
 		int defaultDistance = 1;
 		boolean needNumber = false;
@@ -71,7 +73,7 @@ public class PositionalSearch
 				case 1://token
 					if (readers.size() > distances.size())
 						distances.add(defaultDistance);
-					readers.add(new GAEPostingReader(token.toLowerCase()));
+					readers.add(manager.getPostingReader(token.toLowerCase()));
 					//readers.add(null);
 					break;
 				case 3://0123456789
@@ -113,7 +115,7 @@ public class PositionalSearch
 				LinkedList<int[]> results = new LinkedList<>();
 				merge(results, new int[queryCount], positions, distances, 0);
 				if (!results.isEmpty())
-					writer.write(dictionary.getDocumentInfo(id), results);
+					writer.write(id, results);
 			}
 			for (int i = 0; i < queryCount; i++)
 				if (postings[i] != null && postings[i].getDocumentID() == id)
@@ -124,6 +126,6 @@ public class PositionalSearch
 	public abstract static class PositionalSearchResultWriter
 	{
 
-		public abstract void write(GAEDocumentInfo documentInfo, List<int[]> results);
+		public abstract void write(long documentID, List<int[]> results);
 	}
 }

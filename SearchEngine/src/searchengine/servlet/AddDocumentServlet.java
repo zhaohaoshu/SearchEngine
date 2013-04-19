@@ -9,7 +9,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import searchengine.gae.GAEDictionary;
+import searchengine.gae.GAEDocumentAdder;
 import searchengine.html.builder.HTMLForm;
 import searchengine.html.builder.HTMLFormInputFile;
 import searchengine.html.builder.HTMLFormInputSubmit;
@@ -53,9 +53,9 @@ public class AddDocumentServlet extends HttpServlet
 		int count = 0;
 		if (infos != null)
 		{
-			GAEDictionary dictionary = new GAEDictionary();
+			GAEDocumentAdder dictionary = new GAEDocumentAdder();
 			for (BlobInfo info : infos)
-				if (dictionary.adds(info))
+				if (dictionary.addDocument(info))
 				{
 					added.append(info.getFilename()).append(",");
 					count++;

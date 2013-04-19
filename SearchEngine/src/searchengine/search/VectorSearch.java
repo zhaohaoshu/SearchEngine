@@ -2,16 +2,14 @@ package searchengine.search;
 
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import searchengine.Posting;
+import searchengine.data.Posting;
 import searchengine.TypeTokenizer;
-import searchengine.gae.GAEDictionary;
-import searchengine.gae.GAEDocumentInfo;
-import searchengine.gae.GAEPostingReader;
+import searchengine.data.DocumentInfo;
+import searchengine.data.PostingReader;
+import searchengine.data.SearchDataManager;
 
 /**
  *
@@ -42,37 +40,44 @@ public class VectorSearch
 		return entries;
 	}
 
-	private static void countQuery(Map<String, Integer> entries, GAEPostingReader[] readers, int[] queryCount)
+	private static <D extends DocumentInfo, R extends PostingReader> void countQuery(
+			Map<String, Integer> entries, SearchDataManager<D, R> manager,
+			ArrayList<R> readers, int[] queryCount)
 	{
 		int i = 0;
 		for (Map.Entry<String, Integer> entry : entries.entrySet())
 		{
-			readers[i] = new GAEPostingReader(entry.getKey().toLowerCase());
+			readers.add(manager.getPostingReader(entry.getKey().toLowerCase()));
 			queryCount[i] = entry.getValue();
 			i++;
 		}
 	}
 
-	public static VectorSearchResult[] vectorSearch(String queryString, GAEDictionary dictionary)
+	public static <D extends DocumentInfo, R extends PostingReader> void vectorSearch(
+			String queryString, SearchDataManager<D, R> manager,
+			VectorSearchResultWriter writer)
 	{
 		Map<String, Integer> entries = tokenizeEntry(queryString);
 		int entryCount = entries.size();
 
 		//prepare data
-		GAEPostingReader[] postingReaders = new GAEPostingReader[entryCount];
+		ArrayList<R> readers = new ArrayList<>();
 		int[] queryCount = new int[entryCount];
-		countQuery(entries, postingReaders, queryCount);
+		countQuery(entries, manager, readers, queryCount);
 
-		long documentCount = dictionary.getDocumentCount();
+		long documentCount = manager.getDocumentCount();
 		double[] queryProduct = new double[entryCount];
 		double querySquarSum = 0;
 		for (int i = 0; i < entryCount; i++)
-			if (postingReaders[i].getCount() > 0)
+		{
+			long count = readers.get(i).getCount();
+			if (count > 0)
 			{
 				queryProduct[i] = (1 + Math.log(queryCount[i])) *
-						Math.log((double) (documentCount + 1) / postingReaders[i].getCount());
+						Math.log((double) (documentCount + 1) / count);
 				querySquarSum += queryProduct[i] * queryProduct[i];
 			}
+		}
 		for (int i = 0; i < entryCount; i++)
 			queryProduct[i] /= Math.sqrt(querySquarSum);
 //		System.out.println("query products");
@@ -82,16 +87,15 @@ public class VectorSearch
 
 		Posting[] postings = new Posting[entryCount];
 		for (int i = 0; i < entryCount; i++)
-			postings[i] = postingReaders[i].read(false);
+			postings[i] = readers.get(i).read(false);
 
-		ArrayList<VectorSearchResult> resultList = new ArrayList<>();
 		for (;;)
 		{
 			//get the first document id
 			long id = Common.getMinID(postings);
 			if (id < 0)
 				break;
-			GAEDocumentInfo documentInfo = dictionary.getDocumentInfo(id);
+			double documentLength = manager.getDocumentLength(id);
 			//do the score
 			double score = 0;
 			for (int i = 0; i < entryCount; i++)
@@ -99,48 +103,16 @@ public class VectorSearch
 				{
 					double documentProduct = 1 + Math.log(postings[i].getSize());
 					score += queryProduct[i] * documentProduct;
-					postings[i] = postingReaders[i].read(false);
+					postings[i] = readers.get(i).read(false);
 				}
-			score /= documentInfo.getLength();
-			resultList.add(new VectorSearchResult(score, documentInfo));
+			score /= documentLength;
+			writer.write(score, id);
 		}
-		VectorSearchResult[] results = resultList.toArray(new VectorSearchResult[resultList.size()]);
-		Arrays.sort(results);
-		return results;
 	}
 
-	//<editor-fold defaultstate="collapsed" desc="Result">
-	public static class VectorSearchResult implements Comparable<VectorSearchResult>
+	public static abstract class VectorSearchResultWriter
 	{
 
-		private double score;
-		private GAEDocumentInfo documentInfo;
-
-		public VectorSearchResult(double score, GAEDocumentInfo documentInfo)
-		{
-			this.score = score;
-			this.documentInfo = documentInfo;
-		}
-
-		public double getScore()
-		{
-			return score;
-		}
-
-		public GAEDocumentInfo getDocumentInfo()
-		{
-			return documentInfo;
-		}
-
-		@Override
-		public int compareTo(VectorSearchResult o)
-		{
-			if (score < o.score)
-				return 1;
-			if (score > o.score)
-				return -1;
-			return 0;
-		}
+		public abstract void write(double score, long documentID);
 	}
-	//</editor-fold>
 }

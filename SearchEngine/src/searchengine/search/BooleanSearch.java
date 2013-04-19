@@ -3,11 +3,11 @@ package searchengine.search;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.LinkedList;
-import searchengine.Posting;
+import searchengine.data.SearchDataManager;
+import searchengine.data.DocumentInfo;
+import searchengine.data.Posting;
+import searchengine.data.PostingReader;
 import searchengine.TypeTokenizer;
-import searchengine.gae.GAEDictionary;
-import searchengine.gae.GAEDocumentInfo;
-import searchengine.gae.GAEPostingReader;
 import searchengine.search.expression.ExpressionNode;
 import searchengine.search.expression.ExpressionNodeAnd;
 import searchengine.search.expression.ExpressionNodeNot;
@@ -46,10 +46,11 @@ public class BooleanSearch
 		opStack.addFirst(type);
 	}
 
-	private static ExpressionNode getExpression(
+	private static <D extends DocumentInfo, R extends PostingReader> ExpressionNode getExpression(
 			TypeTokenizer tokenizer,
+			SearchDataManager<D, R> manager,
 			ArrayList<Boolean> values,
-			ArrayList<GAEPostingReader> readers)
+			ArrayList<R> readers)
 	{
 		LinkedList<ExpressionNode> nodeStack = new LinkedList<>();
 		LinkedList<Integer> opStack = new LinkedList<>();
@@ -68,12 +69,12 @@ public class BooleanSearch
 			switch (type)
 			{
 				case 1:
-					readers.add(new GAEPostingReader(token.toLowerCase()));
+					readers.add(manager.getPostingReader(token.toLowerCase()));
 					nodeStack.addFirst(new ExpressionNodeToken(values, values.size()));
 					values.add(false);
 					break;
 				case OP_L://(
-					nodeStack.addFirst(getExpression(tokenizer, values, readers));
+					nodeStack.addFirst(getExpression(tokenizer, manager, values, readers));
 					break;
 				case OP_OR://|
 				case OP_AND://&
@@ -86,7 +87,9 @@ public class BooleanSearch
 		return nodeStack.pollFirst();
 	}
 
-	public static void booleanSearch(String queryString, GAEDictionary dictionary, BooleanSearchResultWriter writer)
+	public static <D extends DocumentInfo, R extends PostingReader> void booleanSearch(
+			String queryString, SearchDataManager<D, R> manager,
+			BooleanSearchResultWriter writer)
 	{
 		TypeTokenizer tokenizer = new TypeTokenizer(new StringReader(queryString));
 		tokenizer.addTypes(new char[]
@@ -95,8 +98,8 @@ public class BooleanSearch
 		});
 
 		ArrayList<Boolean> values = new ArrayList<>();
-		ArrayList<GAEPostingReader> readers = new ArrayList<>();
-		ExpressionNode expression = getExpression(tokenizer, values, readers);
+		ArrayList<R> readers = new ArrayList<>();
+		ExpressionNode expression = getExpression(tokenizer, manager, values, readers);
 		writer.writeExpression(expression);
 
 		int queryCount = readers.size();
@@ -118,7 +121,7 @@ public class BooleanSearch
 				else
 					values.set(i, false);
 			if (expression.getValue())
-				writer.write(dictionary.getDocumentInfo(id), values);
+				writer.write(id, values);
 		}
 	}
 
@@ -127,6 +130,6 @@ public class BooleanSearch
 
 		public abstract void writeExpression(ExpressionNode expression);
 
-		public abstract void write(GAEDocumentInfo documentInfo, ArrayList<Boolean> values);
+		public abstract void write(long documentID, ArrayList<Boolean> values);
 	}
 }

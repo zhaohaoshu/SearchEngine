@@ -13,8 +13,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import searchengine.TypeTokenizer;
+import searchengine.gae.entity.EntityDocumentManager;
 import searchengine.gae.GAEDocumentInfo;
-import searchengine.gae.GAEDictionary;
 import searchengine.html.Encoder;
 import searchengine.html.builder.HTMLLink;
 import searchengine.servlet.common.MainFrame;
@@ -74,8 +74,7 @@ public class ShowDocumentServlet extends HttpServlet
 			resp.sendRedirect("/list");
 			return;
 		}
-		GAEDictionary dictionary = new GAEDictionary();
-		GAEDocumentInfo info = dictionary.getDocumentInfo(id);
+		GAEDocumentInfo info = EntityDocumentManager.getDocumentInfo(id);
 		if (info == null)
 		{
 			resp.sendRedirect("/list");

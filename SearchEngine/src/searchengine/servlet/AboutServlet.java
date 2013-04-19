@@ -6,8 +6,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import searchengine.gae.Comment;
-import searchengine.gae.CommentManager;
+import searchengine.gae.entity.EntityComment;
+import searchengine.gae.entity.EntityCommentManager;
 import searchengine.html.Encoder;
 import searchengine.html.HTMLElement;
 import searchengine.html.builder.HTMLForm;
@@ -34,7 +34,7 @@ public class AboutServlet extends HttpServlet
 		mainFrame.getContent().addChild("<hr/>");
 		mainFrame.getContent().addChild("<p>Please post comments</p>");
 		mainFrame.getContent().addChild("Posted comments:<br/>");
-		for (Comment comment : CommentManager.getAllComments())
+		for (EntityComment comment : EntityCommentManager.getAllComments())
 		{
 			mainFrame.getContent().addChild("<hr/>");
 			mainFrame.getContent().addChild("<p><b>" +
@@ -67,7 +67,7 @@ public class AboutServlet extends HttpServlet
 		String name = req.getParameter("name");
 		String comment = req.getParameter("comment");
 		if (name != null && !name.isEmpty() && comment != null && !comment.isEmpty())
-			CommentManager.addComment(name, Calendar.getInstance().getTime(), comment);
+			EntityCommentManager.addComment(name, Calendar.getInstance().getTime(), comment);
 		resp.sendRedirect("/about#postcomment");
 	}
 }

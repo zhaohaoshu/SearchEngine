@@ -1,6 +1,6 @@
 package searchengine.search;
 
-import searchengine.Posting;
+import searchengine.data.Posting;
 
 /**
  *

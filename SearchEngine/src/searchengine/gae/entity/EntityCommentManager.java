@@ -1,4 +1,4 @@
-package searchengine.gae;
+package searchengine.gae.entity;
 
 import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.DatastoreServiceFactory;
@@ -17,16 +17,16 @@ import java.util.List;
  *
  * @author ZHS
  */
-public class CommentManager
+public class EntityCommentManager
 {
 
-	public static final String KIND_COMMENTS = "Comments";
-	public static final String PROPERTY_COMMENTS_COUNT = "count";
-	public static final String KIND_COMMENT = "Comment";
-	public static final String PROPERTY_COMMENT_NAME = "name";
-	public static final String PROPERTY_COMMENT_TIME = "date";
-	public static final String PROPERTY_COMMENT_COMMENT = "comment";
-	public static final Key COMMENTS_KEY = KeyFactory.createKey(KIND_COMMENTS, 1);
+	private static final String KIND_COMMENTS = "Comments";
+	private static final String PROPERTY_COMMENTS_COUNT = "count";
+	private static final String KIND_COMMENT = "Comment";
+	private static final String PROPERTY_COMMENT_NAME = "name";
+	private static final String PROPERTY_COMMENT_TIME = "date";
+	private static final String PROPERTY_COMMENT_COMMENT = "comment";
+	private static final Key COMMENTS_KEY = KeyFactory.createKey(KIND_COMMENTS, 1);
 
 	public static void addComment(String name, Date time, String comment)
 	{
@@ -63,14 +63,14 @@ public class CommentManager
 		}
 	}
 
-	public static List<Comment> getAllComments()
+	public static List<EntityComment> getAllComments()
 	{
 		DatastoreService datastoreService = DatastoreServiceFactory.getDatastoreService();
-		List<Comment> comments = new LinkedList<>();
+		List<EntityComment> comments = new LinkedList<>();
 		Query query = new Query(KIND_COMMENT, COMMENTS_KEY);
 		PreparedQuery prepare = datastoreService.prepare(query);
 		for (Entity entity : prepare.asIterable())
-			comments.add(new Comment(
+			comments.add(new EntityComment(
 					(String) entity.getProperty(PROPERTY_COMMENT_NAME),
 					(Date) entity.getProperty(PROPERTY_COMMENT_TIME),
 					(String) entity.getProperty(PROPERTY_COMMENT_COMMENT)));

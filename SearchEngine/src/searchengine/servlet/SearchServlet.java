@@ -4,14 +4,18 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import searchengine.data.DocumentInfo;
+import searchengine.data.SearchDataManager;
 import searchengine.search.VectorSearch;
-import searchengine.gae.GAEDictionary;
-import searchengine.gae.GAEDocumentInfo;
+import searchengine.gae.GAESearchDataManager;
 import searchengine.html.Encoder;
 import searchengine.html.builder.HTMLForm;
 import searchengine.html.builder.HTMLFormInput;
@@ -30,29 +34,64 @@ import searchengine.servlet.common.MainFrame;
  */
 public class SearchServlet extends HttpServlet
 {
+
+	SearchDataManager manager = new GAESearchDataManager();
 	//<editor-fold defaultstate="collapsed" desc="Vector">
+
+	private class VectorSearchResultWriter extends VectorSearch.VectorSearchResultWriter
+	{
+
+		private TreeMap<Double, LinkedList<Long>> map;
+
+		public VectorSearchResultWriter()
+		{
+			map = new TreeMap<>();
+		}
+
+		@Override
+		public void write(double score, long documentID)
+		{
+			LinkedList<Long> list = map.get(score);
+			if (list == null)
+			{
+				list = new LinkedList<>();
+				map.put(score, list);
+			}
+			list.add(documentID);
+		}
+
+		public TreeMap<Double, LinkedList<Long>> getMap()
+		{
+			return map;
+		}
+	}
 
 	private void vectorSearch(HTMLTable talbe, String query)
 	{
 		Calendar start = Calendar.getInstance();
-		VectorSearch.VectorSearchResult[] searchResults = VectorSearch.vectorSearch(query, new GAEDictionary());
+		VectorSearchResultWriter writer = new VectorSearchResultWriter();
+		VectorSearch.vectorSearch(query, manager, writer);
 		Calendar end = Calendar.getInstance();
 
 		talbe.addRow("<b>Type: </b>Vector search");
 		talbe.addRow("<b>Time used (ms):</b> " + (end.getTime().getTime() - start.getTime().getTime()));
 
 		DecimalFormat decimalFormat = new DecimalFormat("0.0000000000");
-		for (VectorSearch.VectorSearchResult result : searchResults)
+		for (Map.Entry<Double, LinkedList<Long>> entry : writer.getMap().descendingMap().entrySet())
 		{
-			talbe.addRow("<hr/>");
-			HTMLTableCell cell = new HTMLTableCell();
-			cell.addChild("[" + decimalFormat.format(result.getScore()) + "] ");
-			cell.addChild(new HTMLLink(
-					"/show?id=" + result.getDocumentInfo().getDocumentID() +
-					"&query=" + Encoder.encodeURL(query) +
-					"#anchor",
-					result.getDocumentInfo().getName(), "_blank"));
-			talbe.addRow(cell);
+			Double score = entry.getKey();
+			for (Long id : entry.getValue())
+			{
+				talbe.addRow("<hr/>");
+				HTMLTableCell cell = new HTMLTableCell();
+				cell.addChild("[" + decimalFormat.format(score) + "] ");
+				cell.addChild(new HTMLLink(
+						"/show?id=" + id +
+						"&query=" + Encoder.encodeURL(query) +
+						"#anchor",
+						manager.getDocumentName(id), "_blank"));
+				talbe.addRow(cell);
+			}
 		}
 	}
 	//</editor-fold>
@@ -69,8 +108,9 @@ public class SearchServlet extends HttpServlet
 		}
 
 		@Override
-		public void write(GAEDocumentInfo documentInfo, List<int[]> results)
+		public void write(long documentID, List<int[]> results)
 		{
+			DocumentInfo documentInfo = manager.getDocumentInfo(documentID);
 			talbe.addRow("<hr/>");
 			talbe.addRow(new HTMLLink(
 					"/show?id=" + documentInfo.getDocumentID(), documentInfo.getName(), "_blank"));
@@ -95,7 +135,7 @@ public class SearchServlet extends HttpServlet
 
 		Calendar start = Calendar.getInstance();
 		PositionalSearch.positionalSearch(
-				query, new GAEDictionary(), new PositionalSearchResultWriter(talbe));
+				query, manager, new PositionalSearchResultWriter(talbe));
 		Calendar end = Calendar.getInstance();
 
 		timeCell.addChild("<b>Time used (ms):</b> " + (end.getTime().getTime() - start.getTime().getTime()));
@@ -124,8 +164,9 @@ public class SearchServlet extends HttpServlet
 		}
 
 		@Override
-		public void write(GAEDocumentInfo documentInfo, ArrayList<Boolean> values)
+		public void write(long documentID, ArrayList<Boolean> values)
 		{
+			DocumentInfo documentInfo = manager.getDocumentInfo(documentID);
 			talbe.addRow("<hr/>");
 			HTMLTableCell cell = new HTMLTableCell();
 			cell.addChild(new HTMLLink(
@@ -148,7 +189,7 @@ public class SearchServlet extends HttpServlet
 
 		Calendar start = Calendar.getInstance();
 		BooleanSearch.booleanSearch(
-				query, new GAEDictionary(), new BooleanSearchResultWriter(talbe, expressionCell, query));
+				query, manager, new BooleanSearchResultWriter(talbe, expressionCell, query));
 		Calendar end = Calendar.getInstance();
 
 		timeCell.addChild("<b>Time used (ms):</b> " + (end.getTime().getTime() - start.getTime().getTime()));

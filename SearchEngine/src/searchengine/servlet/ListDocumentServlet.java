@@ -6,8 +6,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import searchengine.gae.entity.EntityDocumentManager;
 import searchengine.gae.GAEDocumentInfo;
-import searchengine.gae.GAEDictionary;
 import searchengine.html.builder.HTMLLink;
 import searchengine.html.builder.HTMLTable;
 import searchengine.html.builder.HTMLTableCell;
@@ -23,8 +23,7 @@ public class ListDocumentServlet extends HttpServlet
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
 	{
-		GAEDictionary dictionary = new GAEDictionary();
-		List<GAEDocumentInfo> infos = dictionary.getAllDocumentInfos();
+		List<GAEDocumentInfo> infos = EntityDocumentManager.getAllDocumentInfos();
 
 		MainFrame mainFrame = new MainFrame("Document List");
 		HTMLTable table = mainFrame.getContent().addChild(new HTMLTable());

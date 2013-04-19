@@ -20,7 +20,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import searchengine.gae.GAEDictionary;
+import searchengine.gae.entity.EntityDictionaryManager;
+import searchengine.gae.entity.EntityDocumentManager;
 
 /**
  *
@@ -77,9 +78,9 @@ public class ClearDataServlet extends HttpServlet
 			case "dictionary":
 			{
 				BlobstoreService blobstoreService = BlobstoreServiceFactory.getBlobstoreService();
-				List<BlobKey> blobKeys = new GAEDictionary().getAllDocumentKeys();
+				List<BlobKey> blobKeys = EntityDocumentManager.getAllDocumentKeys();
 				blobstoreService.delete(blobKeys.toArray(new BlobKey[blobKeys.size()]));
-				Query q = new Query(GAEDictionary.DICTIONARY_KEY);
+				Query q = new Query(EntityDictionaryManager.getDictionaryKey());
 				PreparedQuery prepare = datastoreService.prepare(q);
 				LinkedList<Key> keys = new LinkedList<>();
 				for (Entity entity : prepare.asIterable())

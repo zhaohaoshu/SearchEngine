@@ -1,4 +1,4 @@
-package searchengine.gae;
+package searchengine.gae.entity;
 
 import java.util.Date;
 
@@ -6,14 +6,14 @@ import java.util.Date;
  *
  * @author ZHS
  */
-public class Comment
+public class EntityComment
 {
 
 	private String name;
 	private Date time;
 	private String comment;
 
-	public Comment(String name, Date time, String comment)
+	public EntityComment(String name, Date time, String comment)
 	{
 		this.name = name;
 		this.time = time;

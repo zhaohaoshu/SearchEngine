@@ -1,4 +1,4 @@
-package searchengine;
+package searchengine.data;
 
 /**
  *
@@ -11,6 +11,11 @@ public class Posting
 	private int size;
 	private int[] positions;
 
+	/**
+	 *
+	 * @param documentID
+	 * @param size the number of positions
+	 */
 	public Posting(long documentID, int size)
 	{
 		this.documentID = documentID;
@@ -36,7 +41,7 @@ public class Posting
 	}
 
 	/**
-	 * How many of this term in this document, same as positions.length
+	 * How many of this term in this document. Same as <code>positions.length</code>
 	 *
 	 * @return
 	 */
