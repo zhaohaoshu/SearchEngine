@@ -7,7 +7,7 @@ package searchengine.data;
 public abstract class PostingReader
 {
 
-	public abstract void movePrevious();
+	public abstract void moveNext();
 
 	public abstract Posting read(boolean addPositions);
 

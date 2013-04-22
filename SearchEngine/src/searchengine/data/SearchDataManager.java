@@ -14,6 +14,10 @@ public abstract class SearchDataManager<D extends DocumentInfo, R extends Postin
 	 */
 	public abstract long getDocumentCount();
 
+	public abstract D getDocumentInfo(long documentID);
+
+	public abstract R getPostingReader(String term);
+
 	/**
 	 * Get the length of the document who's id is
 	 * <code>documentID</code>
@@ -21,11 +25,13 @@ public abstract class SearchDataManager<D extends DocumentInfo, R extends Postin
 	 * @param documentID the id of the required document
 	 * @return length of the document
 	 */
-	public abstract double getDocumentLength(long documentID);
+	public double getDocumentLength(long documentID)
+	{
+		return getDocumentInfo(documentID).getLength();
+	}
 
-	public abstract String getDocumentName(long documentID);
-
-	public abstract D getDocumentInfo(long documentID);
-
-	public abstract R getPostingReader(String term);
+	public String getDocumentName(long documentID)
+	{
+		return getDocumentInfo(documentID).getName();
+	}
 }

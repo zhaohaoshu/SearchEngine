@@ -4,7 +4,6 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import searchengine.data.SearchDataManager;
-import searchengine.data.DocumentInfo;
 import searchengine.data.Posting;
 import searchengine.data.PostingReader;
 import searchengine.TypeTokenizer;
@@ -46,11 +45,11 @@ public class BooleanSearch
 		opStack.addFirst(type);
 	}
 
-	private static <D extends DocumentInfo, R extends PostingReader> ExpressionNode getExpression(
+	private static ExpressionNode getExpression(
 			TypeTokenizer tokenizer,
-			SearchDataManager<D, R> manager,
+			SearchDataManager manager,
 			ArrayList<Boolean> values,
-			ArrayList<R> readers)
+			ArrayList<PostingReader> readers)
 	{
 		LinkedList<ExpressionNode> nodeStack = new LinkedList<>();
 		LinkedList<Integer> opStack = new LinkedList<>();
@@ -87,8 +86,8 @@ public class BooleanSearch
 		return nodeStack.pollFirst();
 	}
 
-	public static <D extends DocumentInfo, R extends PostingReader> void booleanSearch(
-			String queryString, SearchDataManager<D, R> manager,
+	public static void booleanSearch(
+			String queryString, SearchDataManager manager,
 			BooleanSearchResultWriter writer)
 	{
 		TypeTokenizer tokenizer = new TypeTokenizer(new StringReader(queryString));
@@ -98,14 +97,17 @@ public class BooleanSearch
 		});
 
 		ArrayList<Boolean> values = new ArrayList<>();
-		ArrayList<R> readers = new ArrayList<>();
+		ArrayList<PostingReader> readers = new ArrayList<>();
 		ExpressionNode expression = getExpression(tokenizer, manager, values, readers);
-		writer.writeExpression(expression);
+		writer.writeBooleanExpression(expression);
 
 		int queryCount = readers.size();
 		Posting[] postings = new Posting[queryCount];
 		for (int i = 0; i < queryCount; i++)
+		{
+			readers.get(i).moveNext();
 			postings[i] = readers.get(i).read(false);
+		}
 
 		for (;;)
 		{
@@ -116,20 +118,21 @@ public class BooleanSearch
 				if (postings[i] != null && postings[i].getDocumentID() == id)
 				{
 					values.set(i, true);
+					readers.get(i).moveNext();
 					postings[i] = readers.get(i).read(false);
 				}
 				else
 					values.set(i, false);
 			if (expression.getValue())
-				writer.write(id, values);
+				writer.writeBooleanResult(id, values);
 		}
 	}
 
-	public static abstract class BooleanSearchResultWriter
+	public static abstract interface BooleanSearchResultWriter
 	{
 
-		public abstract void writeExpression(ExpressionNode expression);
+		public abstract void writeBooleanExpression(ExpressionNode expression);
 
-		public abstract void write(long documentID, ArrayList<Boolean> values);
+		public abstract void writeBooleanResult(long documentID, ArrayList<Boolean> values);
 	}
 }

@@ -144,8 +144,15 @@ public class TypeTokenizer implements Closeable
 	}
 
 	@Override
-	public void close() throws IOException
+	public void close()
 	{
-		reader.close();
+		try
+		{
+			reader.close();
+		}
+		catch (IOException ex)
+		{
+			Logger.getLogger(TypeTokenizer.class.getName()).log(Level.SEVERE, null, ex);
+		}
 	}
 }

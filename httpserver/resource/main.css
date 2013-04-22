@@ -1,0 +1,31 @@
+table
+{
+	width: 100%;
+}
+
+table.main
+{
+	width: 100%;
+	table-layout: fixed;
+}
+
+table.title
+{
+	width: 100%;
+	table-layout: fixed;
+}
+
+div.main
+{
+	width: 90%;
+}
+
+textarea.comment
+{
+	width: 50%;
+}
+
+input.search
+{
+	width: 50%;
+}

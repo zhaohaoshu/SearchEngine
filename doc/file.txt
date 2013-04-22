@@ -1,0 +1,57 @@
+Document:
+	[1] length=1.1 name=aaa.txt pathname=input/aaa.txt
+	[2] bcd.txt
+	[3] a.html
+	[4] a.txt
+	...
+
+DocumentIndex:
+	count=11016
+	[1] offset=123
+	[2] offset=523
+	...
+
+Term:
+	[abc] next=2 count=30
+		[1] next=221 id=2 size=87 positions=...
+		[2] next=234 id=4 size=30 positions=...
+		[3] next=563 id=7 size=19 positions=...
+		...
+		[30] next=-1 id=412 size=62 positions=...
+
+	[xyz] count=346
+		[1] next=21 id=11 size=99 positions=...
+		[2] next=45 id=44 size=41 positions=...
+		[3] next=92 id=78 size=67 positions=...
+		...
+		[346] next=-1 id=412 size=62 positions=...
+
+TermIndex:
+	---
+	term_pointer=-1
+	[a] child_pointer=2
+	[b] child_pointer=-1
+	...
+	[x] child_pointer=6
+	...
+	[z] child_pointer=-1
+	---
+	---
+	offset_pointer=-1
+	[a] child_pointer=-1
+	[b] child_pointer=46
+	...
+	[y] child_pointer=62
+	[z] child_pointer=-1
+	---
+	---
+	offset_pointer=-1
+	[a] child_pointer=-1
+	[b] child_pointer=-1
+	[c] child_pointer=-1
+	...
+	[z] child_pointer=16
+	---
+
+
+

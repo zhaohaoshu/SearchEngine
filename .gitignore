@@ -10,9 +10,3 @@ SearchEngine/nbproject
 SearchEngine/build.xml
 SearchEngine/manifest.mf
 
-war/WEB-INF/appengine-generated
-war/WEB-INF/class
-war/WEB-INF/lib
-
-run/
-
