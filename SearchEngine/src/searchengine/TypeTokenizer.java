@@ -1,9 +1,9 @@
 package searchengine;
 
-import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.Reader;
+import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeSet;
@@ -17,14 +17,20 @@ import java.util.logging.Logger;
 public class TypeTokenizer implements Closeable
 {
 
-	private BufferedReader reader;
 	private StringBuilder buf = new StringBuilder();
 	private int lastType = -1;
+	private int lastRead = -1;
 	private List<TreeSet<Character>> types = new LinkedList<>();
+	private InputStream inputStream;
 
-	public TypeTokenizer(Reader reader)
+	public TypeTokenizer(InputStream inputStream)
 	{
-		this.reader = new BufferedReader(reader);
+		this.inputStream = inputStream;
+	}
+
+	public TypeTokenizer(String string)
+	{
+		inputStream = new ByteArrayInputStream(string.getBytes());
 	}
 
 	public void addType(String string)
@@ -55,7 +61,7 @@ public class TypeTokenizer implements Closeable
 	{
 		if (ch < 0)
 			return -1;
-		if (Character.isLetter(ch))
+		if (('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z'))
 			return 1;
 		int type = 2;
 		for (TreeSet<Character> set : types)
@@ -74,15 +80,20 @@ public class TypeTokenizer implements Closeable
 		for (;;)
 		{
 			int read = -1;
-			try
+			if (lastRead >= 0)
 			{
-				reader.mark(1);
-				read = reader.read();
+				read = lastRead;
+				lastRead = -1;
 			}
-			catch (IOException ex)
-			{
-				Logger.getLogger(TypeTokenizer.class.getName()).log(Level.SEVERE, null, ex);
-			}
+			else
+				try
+				{
+					read = inputStream.read();
+				}
+				catch (IOException ex)
+				{
+					Logger.getLogger(TypeTokenizer.class.getName()).log(Level.SEVERE, null, ex);
+				}
 			if (read < 0)
 				break;
 			int type = getType(read);
@@ -90,14 +101,7 @@ public class TypeTokenizer implements Closeable
 				lastType = type;
 			if (type != lastType)
 			{
-				try
-				{
-					reader.reset();
-				}
-				catch (IOException ex)
-				{
-					Logger.getLogger(TypeTokenizer.class.getName()).log(Level.SEVERE, null, ex);
-				}
+				lastRead = read;
 				break;
 			}
 			buf.append((char) read);
@@ -148,7 +152,7 @@ public class TypeTokenizer implements Closeable
 	{
 		try
 		{
-			reader.close();
+			inputStream.close();
 		}
 		catch (IOException ex)
 		{

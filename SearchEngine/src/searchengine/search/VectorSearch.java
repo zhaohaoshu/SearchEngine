@@ -1,13 +1,11 @@
 package searchengine.search;
 
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import searchengine.data.Posting;
 import searchengine.TypeTokenizer;
-import searchengine.data.DocumentInfo;
 import searchengine.data.PostingReader;
 import searchengine.data.SearchDataManager;
 
@@ -26,7 +24,7 @@ public class VectorSearch
 	 */
 	private static Map<String, Integer> tokenizeEntry(String queryString)
 	{
-		TypeTokenizer tokenizer = new TypeTokenizer(new StringReader(queryString));
+		TypeTokenizer tokenizer = new TypeTokenizer(queryString);
 		List<String> tokens = tokenizer.getStrings(1);
 		HashMap<String, Integer> entries = new HashMap<>();
 		for (String token : tokens)
@@ -40,9 +38,9 @@ public class VectorSearch
 		return entries;
 	}
 
-	private static <D extends DocumentInfo, R extends PostingReader> void countQuery(
-			Map<String, Integer> entries, SearchDataManager<D, R> manager,
-			ArrayList<R> readers, int[] queryCount)
+	private static void countQuery(
+			Map<String, Integer> entries, SearchDataManager manager,
+			ArrayList<PostingReader> readers, int[] queryCount)
 	{
 		int i = 0;
 		for (Map.Entry<String, Integer> entry : entries.entrySet())
@@ -53,15 +51,15 @@ public class VectorSearch
 		}
 	}
 
-	public static <D extends DocumentInfo, R extends PostingReader> void vectorSearch(
-			String queryString, SearchDataManager<D, R> manager,
+	public static void vectorSearch(
+			String queryString, SearchDataManager manager,
 			VectorSearchResultWriter writer)
 	{
 		Map<String, Integer> entries = tokenizeEntry(queryString);
 		int entryCount = entries.size();
 
 		//prepare data
-		ArrayList<R> readers = new ArrayList<>();
+		ArrayList<PostingReader> readers = new ArrayList<>();
 		int[] queryCount = new int[entryCount];
 		countQuery(entries, manager, readers, queryCount);
 
@@ -98,7 +96,6 @@ public class VectorSearch
 			long id = Common.getMinID(postings);
 			if (id < 0)
 				break;
-			double documentLength = manager.getDocumentLength(id);
 			//do the score
 			double score = 0;
 			for (int i = 0; i < entryCount; i++)
@@ -109,7 +106,7 @@ public class VectorSearch
 					readers.get(i).moveNext();
 					postings[i] = readers.get(i).read(false);
 				}
-			score /= documentLength;
+			score /= manager.getDocumentLength(id);
 			writer.write(score, id);
 		}
 	}

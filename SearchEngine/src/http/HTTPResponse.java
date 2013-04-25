@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -44,9 +43,9 @@ public abstract class HTTPResponse
 		setHeader("Location", url);
 	}
 
-	public void serveFile(File file)
+	public void serveFile(InputStream inputStream)
 	{
-		try (FileInputStream inputStream = new FileInputStream(file);)
+		try
 		{
 			byte[] buf = new byte[1024];
 			for (;;)
@@ -56,6 +55,18 @@ public abstract class HTTPResponse
 					break;
 				getContentStream().write(buf, 0, len);
 			}
+		}
+		catch (IOException ex)
+		{
+			Logger.getLogger(HTTPResponse.class.getName()).log(Level.SEVERE, null, ex);
+		}
+	}
+
+	public void serveFile(File file)
+	{
+		try (FileInputStream inputStream = new FileInputStream(file);)
+		{
+			serveFile(inputStream);
 		}
 		catch (IOException ex)
 		{
@@ -74,5 +85,18 @@ public abstract class HTTPResponse
 		setHeader("Content-Disposition", "attachment;filename=\"" + Coder.encodeURL(fileName) + '\"');
 		setContentType(type);
 		serveFile(file);
+	}
+
+	public void serveFile(InputStream inputStream, String fileName)
+	{
+		setHeader("Content-Disposition", "attachment;filename=\"" + Coder.encodeURL(fileName) + '\"');
+		serveFile(inputStream);
+	}
+
+	public void serveFile(InputStream inputStream, String fileName, String type)
+	{
+		setHeader("Content-Disposition", "attachment;filename=\"" + Coder.encodeURL(fileName) + '\"');
+		setContentType(type);
+		serveFile(inputStream);
 	}
 }

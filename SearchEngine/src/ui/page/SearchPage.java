@@ -65,9 +65,12 @@ public class SearchPage extends MainFrame
 	{
 
 		private TreeMap<Double, LinkedList<Long>> map;
+		private int maxCount;
+		private int count = 0;
 
-		public VectorSearchResultWriter()
+		public VectorSearchResultWriter(int maxCount)
 		{
+			this.maxCount = maxCount;
 			map = new TreeMap<>();
 		}
 
@@ -81,6 +84,16 @@ public class SearchPage extends MainFrame
 				map.put(score, list);
 			}
 			list.add(documentID);
+			if (count < maxCount)
+				count++;
+			else
+			{
+				Map.Entry<Double, LinkedList<Long>> firstEntry = map.firstEntry();
+				LinkedList<Long> firstList = firstEntry.getValue();
+				firstList.remove();
+				if (firstList.isEmpty())
+					map.remove(firstEntry.getKey());
+			}
 		}
 
 		public TreeMap<Double, LinkedList<Long>> getMap()
@@ -92,7 +105,18 @@ public class SearchPage extends MainFrame
 	private void vectorSearch(HTMLTable talbe, String query, SearchDataManager manager)
 	{
 		Calendar start = Calendar.getInstance();
-		VectorSearchResultWriter writer = new VectorSearchResultWriter();
+		int maxCount = 0;
+		if (query.startsWith("/"))
+			for (int i = 1; i < query.length(); i++)
+				if (Character.isDigit(query.charAt(i)))
+				{
+					for (int j = i; j < query.length() && Character.isDigit(query.charAt(j)); j++)
+						maxCount = maxCount * 10 + (query.charAt(j) - '0');
+					break;
+				}
+		if (maxCount <= 0)
+			maxCount = 30;
+		VectorSearchResultWriter writer = new VectorSearchResultWriter(maxCount);
 		VectorSearch.vectorSearch(query, manager, writer);
 		Calendar end = Calendar.getInstance();
 
@@ -110,8 +134,7 @@ public class SearchPage extends MainFrame
 				cell.addChild("[" + decimalFormat.format(score) + "] ");
 				cell.addChild(new HTMLLink(
 						"/show?id=" + id +
-						"&query=" + Coder.encodeURL(query) +
-						"#anchor",
+						"&query=" + Coder.encodeURL(query),
 						manager.getDocumentName(id), "_blank"));
 				talbe.addRow(cell);
 			}
@@ -124,11 +147,13 @@ public class SearchPage extends MainFrame
 	{
 
 		private HTMLTable talbe;
+		private String query;
 		private SearchDataManager manager;
 
-		public PositionalSearchResultWriter(HTMLTable talbe, SearchDataManager manager)
+		public PositionalSearchResultWriter(HTMLTable talbe, String query, SearchDataManager manager)
 		{
 			this.talbe = talbe;
+			this.query = query;
 			this.manager = manager;
 		}
 
@@ -138,7 +163,9 @@ public class SearchPage extends MainFrame
 			DocumentInfo documentInfo = manager.getDocumentInfo(documentID);
 			talbe.addRow("<hr/>");
 			talbe.addRow(new HTMLLink(
-					"/show?id=" + documentInfo.getDocumentID(), documentInfo.getName(), "_blank"));
+					"/show?id=" + documentInfo.getDocumentID() +
+					"&query=" + Coder.encodeURL(query),
+					documentInfo.getName(), "_blank"));
 			for (int[] result : results)
 			{
 				StringBuffer buf = new StringBuffer();
@@ -147,7 +174,7 @@ public class SearchPage extends MainFrame
 				buf.append(result[result.length - 1]);
 				talbe.addRow(new HTMLLink(
 						"/show?id=" + documentInfo.getDocumentID() +
-						"&pos=" + buf + "#anchor",
+						"&pos=" + buf + "#anchorp0",
 						'[' + buf.toString() + ']', "_blank"));
 			}
 		}
@@ -160,7 +187,7 @@ public class SearchPage extends MainFrame
 
 		Calendar start = Calendar.getInstance();
 		PositionalSearch.positionalSearch(
-				query, manager, new PositionalSearchResultWriter(talbe, manager));
+				query, manager, new PositionalSearchResultWriter(talbe, query, manager));
 		Calendar end = Calendar.getInstance();
 
 		timeCell.addChild("<b>Time used (ms):</b> " + (end.getTime().getTime() - start.getTime().getTime()));
@@ -198,8 +225,7 @@ public class SearchPage extends MainFrame
 			HTMLTableCell cell = new HTMLTableCell();
 			cell.addChild(new HTMLLink(
 					"/show?id=" + documentInfo.getDocumentID() +
-					"&query=" + Coder.encodeURL(query) +
-					"#anchor",
+					"&query=" + Coder.encodeURL(query),
 					documentInfo.getName(), "_blank"));
 			cell.addChild("<br/>");
 			for (int i = 0; i < values.size(); i++)

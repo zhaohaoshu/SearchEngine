@@ -22,7 +22,10 @@ public class Coder
 			switch (ch)
 			{
 				case ' ':
-					builder.append("&nbsp;");
+					if (i > 0 && string.charAt(i - 1) == ' ')
+						builder.append("&nbsp;");
+					else
+						builder.append(' ');
 					break;
 				case '&':
 					builder.append("&amp;");

@@ -1,12 +1,10 @@
 package searchengine.search;
 
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import searchengine.data.Posting;
 import searchengine.TypeTokenizer;
-import searchengine.data.DocumentInfo;
 import searchengine.data.PostingReader;
 import searchengine.data.SearchDataManager;
 
@@ -49,16 +47,16 @@ public class PositionalSearch
 				pointers[count]--;
 	}
 
-	public static <D extends DocumentInfo, R extends PostingReader> void positionalSearch(
-			String queryString, SearchDataManager<D, R> manager,
+	public static void positionalSearch(
+			String queryString, SearchDataManager manager,
 			PositionalSearchResultWriter writer)
 	{
-		TypeTokenizer tokenizer = new TypeTokenizer(new StringReader(queryString));
+		TypeTokenizer tokenizer = new TypeTokenizer(queryString);
 		tokenizer.addTypes(new String[]
 		{
 			"/", "0123456789"
 		});
-		ArrayList<R> readers = new ArrayList<>();
+		ArrayList<PostingReader> readers = new ArrayList<>();
 		ArrayList<Integer> distances = new ArrayList<>();
 		int defaultDistance = 1;
 		boolean needNumber = false;

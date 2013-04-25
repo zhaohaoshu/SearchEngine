@@ -28,6 +28,10 @@ public class ListDocumentServlet implements Servlet
 		LinkedList<DocumentInfo> infos = new LinkedList<>();
 		for (int i = 1; i <= count; i++)
 			infos.add(manager.getDocumentInfo(i));
-		ResponseWriter.write(new ListDocumentPage(infos), response);
+		boolean appendInfo = false;
+		if (request.getParameter("append") != null)
+			appendInfo = true;
+		ListDocumentPage listDocumentPage = new ListDocumentPage(infos, appendInfo);
+		ResponseWriter.write(listDocumentPage, response);
 	}
 }

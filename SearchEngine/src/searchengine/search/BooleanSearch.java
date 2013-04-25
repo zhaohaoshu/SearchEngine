@@ -1,6 +1,5 @@
 package searchengine.search;
 
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import searchengine.data.SearchDataManager;
@@ -90,7 +89,7 @@ public class BooleanSearch
 			String queryString, SearchDataManager manager,
 			BooleanSearchResultWriter writer)
 	{
-		TypeTokenizer tokenizer = new TypeTokenizer(new StringReader(queryString));
+		TypeTokenizer tokenizer = new TypeTokenizer(queryString);
 		tokenizer.addTypes(new char[]
 		{
 			'(', ')', '|', '&', '!'

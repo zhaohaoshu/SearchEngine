@@ -4,6 +4,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.Calendar;
 import java.util.List;
 import searchengine.data.Posting;
 
@@ -17,6 +18,7 @@ public class TermManager implements Closeable
 	private static final int CHILD_POINTER_SIZE = Long.SIZE / 8;
 	private static final int TERM_POINTER_SIZE = Long.SIZE / 8;
 	private static final int NEXT_POINTER_SIZE = Long.SIZE / 8;
+	private static final int COUNT_SIZE = Long.SIZE / 8;
 	private RandomAccessFile indexAccess;
 	private RandomAccessFile termAccess;
 
@@ -31,28 +33,23 @@ public class TermManager implements Closeable
 
 	public void addPosting(String term, long documentID, List<Integer> positions) throws IOException
 	{
+//		long startTermTime = Calendar.getInstance().getTime().getTime();
 		long termPointer = getTermPointer(term, true);
+//		System.out.println("term:\t\t" + (Calendar.getInstance().getTime().getTime() - startTermTime) + "\t" + term);
+//		long startPostingTime = Calendar.getInstance().getTime().getTime();
+		long postingPointer = appendPosting(documentID, positions);
 
 		termAccess.seek(termPointer + NEXT_POINTER_SIZE);
 		long count = termAccess.readLong();
+		long tailPointer = termAccess.readLong();
+		//count & tail
 		termAccess.seek(termPointer + NEXT_POINTER_SIZE);
 		termAccess.writeLong(count + 1);
-
-		long nextPointerOffset = termPointer;
-		termAccess.seek(nextPointerOffset);
-		for (;;)
-		{
-			long nextPointer = termAccess.readLong();
-			if (nextPointer < 0)
-			{
-				long postingPointer = appendPosting(documentID, positions);
-				termAccess.seek(nextPointerOffset);
-				termAccess.writeLong(postingPointer);
-				break;
-			}
-			termAccess.seek(nextPointer);
-			nextPointerOffset = nextPointer;
-		}
+		termAccess.writeLong(postingPointer);
+		//next
+		termAccess.seek(tailPointer);
+		termAccess.writeLong(postingPointer);
+//		System.out.println("post:\t\t" + (Calendar.getInstance().getTime().getTime() - startPostingTime) + "\t" + term);
 	}
 
 	/**
@@ -87,6 +84,8 @@ public class TermManager implements Closeable
 		termAccess.writeLong(-1);
 		//count
 		termAccess.writeLong(0);
+		//tail
+		termAccess.writeLong(length);
 		return length;
 	}
 

@@ -1,7 +1,6 @@
 package searchengine;
 
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.LinkedList;
 import java.util.Map;
 
@@ -21,7 +20,7 @@ public class DocumentAnalyser
 	 */
 	public static int tokenizeDocument(InputStream inputStream, Map<String, LinkedList<Integer>> map)
 	{
-		TypeTokenizer tokenizer = new TypeTokenizer(new InputStreamReader(inputStream));
+		TypeTokenizer tokenizer = new TypeTokenizer(inputStream);
 		int position = 0;
 		for (;;)
 		{
@@ -49,6 +48,6 @@ public class DocumentAnalyser
 			double tf = 1 + Math.log(entry.getValue().size());
 			length += tf * tf;
 		}
-		return length;
+		return Math.sqrt(length);
 	}
 }

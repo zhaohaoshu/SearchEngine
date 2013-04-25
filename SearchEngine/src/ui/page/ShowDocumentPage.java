@@ -1,5 +1,7 @@
 package ui.page;
 
+import html.HTMLElement;
+import html.builder.HTMLAnchor;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -7,7 +9,7 @@ import java.util.TreeSet;
 import http.Coder;
 import searchengine.TypeTokenizer;
 import html.builder.HTMLLink;
-import http.HTTPRequest;
+import java.io.ByteArrayInputStream;
 import java.io.StringReader;
 import searchengine.data.DocumentInfo;
 
@@ -23,7 +25,7 @@ public class ShowDocumentPage extends MainFrame
 		TreeSet<Integer> positions = new TreeSet<>();
 		if (pos != null)
 		{
-			TypeTokenizer tokenizer = new TypeTokenizer(new StringReader(pos));
+			TypeTokenizer tokenizer = new TypeTokenizer(pos);
 			tokenizer.addType("0123456789");
 			for (;;)
 			{
@@ -41,7 +43,7 @@ public class ShowDocumentPage extends MainFrame
 		TreeSet<String> keyWords = new TreeSet<>();
 		if (query != null)
 		{
-			TypeTokenizer tokenizer = new TypeTokenizer(new BufferedReader(new StringReader(query)));
+			TypeTokenizer tokenizer = new TypeTokenizer(query);
 			for (String string : tokenizer.getStrings(1))
 				keyWords.add(string.toLowerCase());
 		}
@@ -55,10 +57,15 @@ public class ShowDocumentPage extends MainFrame
 		TreeSet<Integer> positions = getPositions(pos);
 		TreeSet<String> keyWords = getKeyWords(query);
 		getContent().addChild("<p><b>Document - " + info.getName() + "</b><br/>[");
+		getContent().addChild(new HTMLLink(info.getUrl(), info.getUrl(), "_blank"));
+		getContent().addChild("]<br/>[");
 		getContent().addChild(new HTMLLink("/show?id=" + info.getDocumentID() + "&download=download", "download"));
 		getContent().addChild("]</p>");
-		boolean flag = false;
-		try (TypeTokenizer tokenizer = new TypeTokenizer(new BufferedReader(new InputStreamReader(inputStream))))
+		HTMLElement keyWordsDiv = getContent().addChild(new HTMLElement("div"));
+		getContent().addChild("<hr/>");
+		int anchorQID = 0;
+		int anchorPID = 0;
+		try (TypeTokenizer tokenizer = new TypeTokenizer(inputStream))
 		{
 			int position = 0;
 			StringBuilder builder = new StringBuilder();
@@ -71,10 +78,14 @@ public class ShowDocumentPage extends MainFrame
 				{
 					if (positions.contains(position) || keyWords.contains(string.toLowerCase()))
 					{
-						if (!flag)
+						if (positions.contains(position))
+							builder.append(new HTMLAnchor("anchorp" + (anchorPID++)));
+						if (keyWords.contains(string.toLowerCase()))
 						{
-							builder.append("<span id=\"anchor\"/>");
-							flag = true;
+							builder.append(new HTMLAnchor("anchorq" + anchorQID));
+							keyWordsDiv.addChild(new HTMLLink("#anchorq" + anchorQID, string));
+							keyWordsDiv.addChild(" ");
+							anchorQID++;
 						}
 						builder.append("<b style=\"background-color:yellow\">").append(string).append("</b>");
 					}

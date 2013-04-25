@@ -13,7 +13,7 @@ import searchengine.data.DocumentInfo;
 public class ListDocumentPage extends MainFrame
 {
 
-	public ListDocumentPage(List<? extends DocumentInfo> infos)
+	public ListDocumentPage(List<? extends DocumentInfo> infos, boolean appendInfo)
 	{
 		super("Dcouments");
 		HTMLTable table = getContent().addChild(new HTMLTable());
@@ -23,8 +23,12 @@ public class ListDocumentPage extends MainFrame
 			HTMLTableCell cell = new HTMLTableCell();
 			cell.addChild("[");
 			cell.addChild(new HTMLLink("/show?id=" + info.getDocumentID() + "&download=download", "download"));
+			cell.addChild("] [");
+			cell.addChild(new HTMLLink(info.getUrl(), "url", "_blank"));
 			cell.addChild("] ");
-			cell.addChild(new HTMLLink("show?id=" + info.getDocumentID(), info.getName()));
+			cell.addChild(new HTMLLink("show?id=" + info.getDocumentID(), info.getName(), "_blank"));
+			if (appendInfo)
+				cell.addChild("\t" + info);
 			table.addRow(cell);
 		}
 	}

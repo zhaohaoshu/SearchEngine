@@ -1,6 +1,5 @@
 package ui.servlet;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.logging.Level;
@@ -44,19 +43,13 @@ public class ShowDocumentServlet implements Servlet
 		}
 		if ("download".equals(request.getParameter("download")))
 		{
-			response.serveFile(new File(info.getPathname()), info.getName(), "application/octet-stream");
+			response.serveFile(manager.getDocumentInputStream(info),
+					info.getName(), "application/octet-stream");
 			return;
 		}
-		try (FileInputStream fileInputStream = new FileInputStream(info.getPathname());)
-		{
-			ShowDocumentPage showDocumentPage = new ShowDocumentPage(
-					info, fileInputStream,
-					request.getParameter("pos"), request.getParameter("query"));
-			ResponseWriter.write(showDocumentPage, response);
-		}
-		catch (IOException ex)
-		{
-			Logger.getLogger(ShowDocumentServlet.class.getName()).log(Level.SEVERE, null, ex);
-		}
+		ShowDocumentPage showDocumentPage = new ShowDocumentPage(
+				info, manager.getDocumentInputStream(info),
+				request.getParameter("pos"), request.getParameter("query"));
+		ResponseWriter.write(showDocumentPage, response);
 	}
 }

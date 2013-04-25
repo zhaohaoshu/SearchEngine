@@ -2,7 +2,6 @@ package file.manager;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import file.FileDocumentInfo;
@@ -28,18 +27,18 @@ public class DocumentManager implements Closeable
 	/**
 	 * Add a new document, and return the new added document's ID
 	 *
-	 * @param name
-	 * @param length
-	 * @param pathname
 	 * @return the new added document's ID
 	 */
-	public long addNewDocument(String name, double length, String pathname) throws IOException
+	public long addNewDocument(String name, double length, String pathname, long start, long end, String url) throws IOException
 	{
 		long offset = documentAccess.length();
 		documentAccess.seek(offset);
 		documentAccess.writeDouble(length);
 		documentAccess.writeUTF(name);
 		documentAccess.writeUTF(pathname);
+		documentAccess.writeLong(start);
+		documentAccess.writeLong(end);
+		documentAccess.writeUTF(url);
 
 		indexAccess.seek(0);
 		long documentCount = indexAccess.readLong();
@@ -69,8 +68,11 @@ public class DocumentManager implements Closeable
 		double length = documentAccess.readDouble();
 		String name = documentAccess.readUTF();
 		String pathname = documentAccess.readUTF();
+		long start = documentAccess.readLong();
+		long end = documentAccess.readLong();
+		String url = documentAccess.readUTF();
 
-		return new FileDocumentInfo(documentID, name, length, pathname);
+		return new FileDocumentInfo(documentID, name, length, pathname, start, end, url);
 	}
 
 	public double getDocumentLength(long documentID) throws IOException
