@@ -1,7 +1,6 @@
 package searchengine;
 
 import java.io.InputStream;
-import java.util.LinkedList;
 import java.util.Map;
 
 /**
@@ -18,7 +17,7 @@ public class DocumentAnalyser
 	 * @param map
 	 * @return The number of tokens
 	 */
-	public static int tokenizeDocument(InputStream inputStream, Map<String, LinkedList<Integer>> map)
+	public static int tokenizeDocument(InputStream inputStream, Map<String, Integer> map)
 	{
 		TypeTokenizer tokenizer = new TypeTokenizer(inputStream);
 		int position = 0;
@@ -28,24 +27,22 @@ public class DocumentAnalyser
 			if (term == null)
 				break;
 			term = term.toLowerCase();
-			LinkedList<Integer> positions = map.get(term);
-			if (positions == null)
-			{
-				positions = new LinkedList<>();
-				map.put(term, positions);
-			}
-			positions.addLast(position);
+			Integer positionCount = map.get(term);
+			if (positionCount == null)
+				map.put(term, 1);
+			else
+				map.put(term, positionCount + 1);
 			position++;
 		}
 		return position;
 	}
 
-	public static double calcDocumentLength(Map<String, LinkedList<Integer>> map)
+	public static double calcDocumentLength(Map<String, Integer> map)
 	{
 		double length = 0;
-		for (Map.Entry<String, LinkedList<Integer>> entry : map.entrySet())
+		for (Map.Entry<String, Integer> entry : map.entrySet())
 		{
-			double tf = 1 + Math.log(entry.getValue().size());
+			double tf = 1 + Math.log(entry.getValue());
 			length += tf * tf;
 		}
 		return Math.sqrt(length);

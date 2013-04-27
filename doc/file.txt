@@ -12,11 +12,10 @@ DocumentIndex:
 	...
 
 Term:
-	TermNode:
+	PostingNode:
 		nextPointer
 		documentID
-		positionCount
-		positionPointer
+		positionCount(int)
 	[abc]
 		[1] nextPointer=221 documentID=2 positionCount=87 positionPointer=2
 		...

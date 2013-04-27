@@ -91,7 +91,7 @@ public class PositionalSearch
 		int queryCount = readers.size();
 		Posting[] postings = new Posting[queryCount];
 		for (int i = 0; i < queryCount; i++)
-			postings[i] = readers.get(i).read(false);
+			postings[i] = readers.get(i).read();
 
 		int[][] positions = new int[queryCount][];
 		for (;;)
@@ -105,8 +105,8 @@ public class PositionalSearch
 					flag = false;
 			if (flag)
 			{
-				for (int i = 0; i < queryCount; i++)
-					positions[i] = readers.get(i).read(true).getPositions();
+//				for (int i = 0; i < queryCount; i++)
+//					positions[i] = readers.get(i).read().getPositions();
 				LinkedList<int[]> results = new LinkedList<>();
 				merge(results, new int[queryCount], positions, distances, 0);
 				if (!results.isEmpty())
@@ -116,7 +116,7 @@ public class PositionalSearch
 				if (postings[i] != null && postings[i].getDocumentID() == id)
 				{
 					readers.get(i).moveNext();
-					postings[i] = readers.get(i).read(false);
+					postings[i] = readers.get(i).read();
 				}
 		}
 	}

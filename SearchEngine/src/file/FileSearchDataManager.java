@@ -4,13 +4,12 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import searchengine.DocumentAnalyser;
 import file.manager.DocumentManager;
-import file.manager.TermManager;
+import file.manager.PostingManager;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -24,19 +23,19 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 {
 
 	private DocumentManager documentManager;
-	private TermManager termManager;
+	private PostingManager postingManager;
 	private File documentDirFile;
 
 	public FileSearchDataManager(File documentDirFile,
 			File documentFile, File documentIndexFile,
-			File termFile, File termIndexFile, File positionFile,
+			File postingFile, File postingIndexFile,
 			String mode)
 	{
 		try
 		{
 			this.documentDirFile = documentDirFile;
 			documentManager = new DocumentManager(documentFile, documentIndexFile, mode);
-			termManager = new TermManager(termFile, termIndexFile, positionFile, mode);
+			postingManager = new PostingManager(postingFile, postingIndexFile, mode);
 		}
 		catch (IOException ex)
 		{
@@ -45,29 +44,29 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 	}
 	//<editor-fold defaultstate="collapsed" desc="Add Document">
 
-	public void loadDocument(File file, long maxPostingCount, long maxPositionCount)
+	public void loadDocument(File file, long maxPostingCount)
 	{
-		TermTree termTree = new TermTree(termManager, maxPostingCount, maxPositionCount);
-		loadDocument(file, termTree);
-		termTree.flush();
+		PostingTree postingTree = new PostingTree(postingManager, maxPostingCount);
+		loadDocument(file, postingTree);
+		postingTree.flush();
 	}
 
-	private void loadDocument(File file, TermTree termTree)
+	private void loadDocument(File file, PostingTree postingTree)
 	{
 		if (file.isDirectory())
 		{
 			System.out.println("Read directory " + file);
 			for (File childFile : file.listFiles())
-				loadDocument(childFile, termTree);
+				loadDocument(childFile, postingTree);
 		}
 		else
 		{
 			System.out.println("\tRead file " + file);
-			readParadiseFile(file, termTree);
+			readParadiseFile(file, postingTree);
 		}
 	}
 
-	public void readParadiseFile(File file, TermTree termTree)
+	public void readParadiseFile(File file, PostingTree postingTree)
 	{
 		try
 		{
@@ -105,7 +104,7 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 					}
 					else if (lastRead == 31)
 					{
-						addDocument(termTree, new ByteArrayInputStream(body), title,
+						addDocument(postingTree, new ByteArrayInputStream(body), title,
 								documentDirFile.toURI().relativize(file.toURI()).getRawPath(),
 								bodyStart, bodyEnd, url);
 						builder.clear();
@@ -125,17 +124,17 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 		}
 	}
 
-	public boolean addDocument(TermTree termTree, InputStream inputStream, String name, String pathname, long start, long end, String url)
+	public boolean addDocument(PostingTree postingTree, InputStream inputStream, String name, String pathname, long start, long end, String url)
 	{
-		Map<String, LinkedList<Integer>> map = new HashMap<>();
+		Map<String, Integer> map = new HashMap<>();
 		DocumentAnalyser.tokenizeDocument(inputStream, map);
 		double length = DocumentAnalyser.calcDocumentLength(map);
 		try
 		{
 			long documentID = documentManager.addNewDocument(name, length, pathname, start, end, url);
 //			System.out.println("    Add\t" + documentID + "\t" + pathname);
-			for (Map.Entry<String, LinkedList<Integer>> entry : map.entrySet())
-				termTree.add(entry.getKey(), documentID, entry.getValue());
+			for (Map.Entry<String, Integer> entry : map.entrySet())
+				postingTree.addPosting(entry.getKey(), documentID, entry.getValue());
 //			termManager.addPosting(entry.getKey(), documentID, entry.getValue());
 			return true;
 		}
@@ -223,7 +222,7 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 	@Override
 	public FilePostingReader getPostingReader(String term)
 	{
-		return new FilePostingReader(term, termManager);
+		return new FilePostingReader(term, postingManager);
 	}
 	//</editor-fold>
 
@@ -233,7 +232,7 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 		try
 		{
 			documentManager.close();
-			termManager.close();
+			postingManager.close();
 		}
 		catch (IOException ex)
 		{

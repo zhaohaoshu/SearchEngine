@@ -1,43 +1,39 @@
 package file;
 
-import file.manager.TermManager;
+import file.manager.PostingManager;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import searchengine.data.Posting;
 
 /**
  *
  * @author ZHS
  */
-public class TermTree
+public class PostingTree
 {
 
 	private long lastTime = Calendar.getInstance().getTimeInMillis();
 	private long lastDocumentID = 0;
 	private long currentDocumentID = 0;
-	private TermManager termManager;
+	private PostingManager postingManager;
 	private long maxPostingCount;
-	private long maxPositionCount;
 	private Node root;
-	private long postingCount;
-	private long positionCount;
+	private long totalPostingCount;
 
-	public TermTree(TermManager termManager, long maxPostingCount, long maxPositionCount)
+	public PostingTree(PostingManager postingManager, long maxPostingCount)
 	{
-		this.termManager = termManager;
+		this.postingManager = postingManager;
 		this.maxPostingCount = maxPostingCount;
-		this.maxPositionCount = maxPositionCount;
 		root = new Node();
-		postingCount = 0;
-		positionCount = 0;
+		totalPostingCount = 0;
 	}
 
-	public void add(String term, long documentID, LinkedList<Integer> positions)
+	public void addPosting(String term, long documentID, int positionCount)
 	{
-		postingCount++;
-		positionCount += positions.size();
+		totalPostingCount++;
 		Node p = root;
 		for (int i = 0; i < term.length(); i++)
 		{
@@ -46,18 +42,16 @@ public class TermTree
 				p.children[index] = new Node();
 			p = p.children[index];
 		}
-		p.postings.addLast(new Posting(documentID, positions));
+		p.postings.addLast(new Posting(documentID, positionCount));
 		currentDocumentID = documentID;
-		if ((maxPostingCount >= 0 && postingCount > maxPostingCount) ||
-				(maxPositionCount >= 0 && positionCount > maxPositionCount))
+		if (totalPostingCount > maxPostingCount)
 			flush();
 	}
 
 	public void clear()
 	{
 		root = new Node();
-		postingCount = 0;
-		positionCount = 0;
+		totalPostingCount = 0;
 	}
 
 	public void flush()
@@ -73,9 +67,9 @@ public class TermTree
 					(lastDocumentID + 1) + "~" + currentDocumentID + ")\t" +
 					(flushStartTime - lastTime) + "\t" +
 					(flushStartTime - lastTime) / documentCount);
-			termManager.addTermTree(this);
+			postingManager.addTermTree(this);
 			long time = Calendar.getInstance().getTimeInMillis();
-			System.out.println("\t\t" +
+			System.out.println("\t\t\t" +
 					(time - flushStartTime) + "/" + (time - lastTime) + "\t" +
 					((time - flushStartTime) / documentCount) + "/" +
 					((time - lastTime) / documentCount));
@@ -84,7 +78,7 @@ public class TermTree
 		}
 		catch (IOException ex)
 		{
-			Logger.getLogger(TermTree.class.getName()).log(Level.SEVERE, null, ex);
+			Logger.getLogger(PostingTree.class.getName()).log(Level.SEVERE, null, ex);
 		}
 		clear();
 	}
@@ -114,35 +108,6 @@ public class TermTree
 		public Node[] getChildren()
 		{
 			return children;
-		}
-	}
-
-	public class Posting
-	{
-
-		private long documentID;
-		private LinkedList<Integer> positions;
-
-		public Posting(long documentID, LinkedList<Integer> positions)
-		{
-			this.documentID = documentID;
-			this.positions = positions;
-		}
-
-		public long getDocumentID()
-		{
-			return documentID;
-		}
-
-		public LinkedList<Integer> getPositions()
-		{
-			return positions;
-		}
-
-		@Override
-		public String toString()
-		{
-			return "{" + documentID + "," + positions.size() + '}';
 		}
 	}
 }

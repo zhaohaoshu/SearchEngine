@@ -3,7 +3,7 @@ package file;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import file.manager.TermManager;
+import file.manager.PostingManager;
 import searchengine.data.Posting;
 import searchengine.data.PostingReader;
 
@@ -14,15 +14,15 @@ import searchengine.data.PostingReader;
 public class FilePostingReader extends PostingReader
 {
 
-	private TermManager termManager;
-	private TermManager.TermPointer termPointer;
+	private PostingManager termManager;
+	private PostingManager.PostingPointer postingPointer;
 
-	public FilePostingReader(String term, TermManager termManager)
+	public FilePostingReader(String term, PostingManager postingManager)
 	{
 		try
 		{
-			this.termManager = termManager;
-			termPointer = termManager.getTermPointer(term);
+			this.termManager = postingManager;
+			postingPointer = postingManager.getTermPointer(term);
 		}
 		catch (IOException ex)
 		{
@@ -35,8 +35,8 @@ public class FilePostingReader extends PostingReader
 	{
 		try
 		{
-			if (!termPointer.end())
-				termPointer.moveNext();
+			if (!postingPointer.end())
+				postingPointer.moveNext();
 		}
 		catch (IOException ex)
 		{
@@ -45,13 +45,13 @@ public class FilePostingReader extends PostingReader
 	}
 
 	@Override
-	public Posting read(boolean addPositions)
+	public Posting read()
 	{
-		if (termPointer.end())
+		if (postingPointer.end())
 			return null;
 		try
 		{
-			return termPointer.getPosting(addPositions);
+			return postingPointer.getPosting();
 		}
 		catch (IOException ex)
 		{
@@ -63,6 +63,6 @@ public class FilePostingReader extends PostingReader
 	@Override
 	public long getCount()
 	{
-		return termPointer.getPostingCount();
+		return postingPointer.getPostingCount();
 	}
 }

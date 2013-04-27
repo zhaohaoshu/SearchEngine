@@ -1,9 +1,11 @@
 package ui;
 
+import file.FilePostingReader;
 import java.io.File;
 import java.util.Scanner;
 import file.FileSearchDataManager;
 import http.HTTPServer;
+import searchengine.data.Posting;
 import ui.servlet.ServletRequestDeliver;
 
 /**
@@ -18,15 +20,17 @@ public class Main
 	{
 		System.out.println("Usage: searchengine <dictionary_dir> <document_dir> <action>");
 		System.out.println("<action> can be one of the following:");
-		System.out.println("  loaddir <max_posting_count> <max_position_count>");
+		System.out.println("  loaddir <max_posting_count>");
 		System.out.println("  httpserver <server_dir> <port>");
+		System.out.println("  test");
 //		System.out.println("  inputfile <input_file>");
 //		System.out.println("  cmdline");
 	}
 
 	public static void main(String[] args)
 	{
-//		switch (new Scanner(System.in).nextLine())
+//		Scanner testScanner = new Scanner(System.in);
+//		switch (testScanner.nextLine())
 //		{
 //			case "r":
 //				args = new String[]
@@ -34,8 +38,15 @@ public class Main
 //					"E:\\File\\School\\p\\2\\网络信息体系结构\\resource\\gov\\dictionary",
 //					"E:\\File\\School\\p\\2\\网络信息体系结构\\resource\\gov\\part",
 //					"loaddir",
-//					"-1",
 //					"1000",
+//				};
+//				break;
+//			case "t":
+//				args = new String[]
+//				{
+//					"E:\\File\\School\\p\\2\\网络信息体系结构\\resource\\gov\\dictionary",
+//					"E:\\File\\School\\p\\2\\网络信息体系结构\\resource\\gov\\part",
+//					"test",
 //				};
 //				break;
 //			default:
@@ -58,25 +69,23 @@ public class Main
 		File dictionaryDirFile = new File(args[argIndex++]);
 		File documentFile = new File(dictionaryDirFile, "document");
 		File documentIndexFile = new File(dictionaryDirFile, "document_index");
-		File termFile = new File(dictionaryDirFile, "term");
-		File termIndexFile = new File(dictionaryDirFile, "term_index");
-		File positionFile = new File(dictionaryDirFile, "position");
+		File postingFile = new File(dictionaryDirFile, "posting");
+		File postingIndexFile = new File(dictionaryDirFile, "posting_index");
 		File documentDirFile = new File(args[argIndex++]);
 		switch (args[argIndex++])
 		{
 			case "loaddir":
 			{
-				if (argIndex + 2 > args.length)
+				if (argIndex + 1 > args.length)
 				{
 					printUsage();
 					return;
 				}
 				long maxPostingCount = Long.parseLong(args[argIndex++]);
-				long maxPositionCount = Long.parseLong(args[argIndex++]);
 				try (FileSearchDataManager manager = new FileSearchDataManager(documentDirFile,
-						documentFile, documentIndexFile, termFile, termIndexFile, positionFile, "rw"))
+						documentFile, documentIndexFile, postingFile, postingIndexFile, "rw"))
 				{
-					manager.loadDocument(documentDirFile, maxPostingCount, maxPositionCount);
+					manager.loadDocument(documentDirFile, maxPostingCount);
 					long documentCount = manager.getDocumentCount();
 					System.out.println("Loaded " + documentCount + " documents");
 					Scanner scanner = new Scanner(System.in);
@@ -96,7 +105,7 @@ public class Main
 				File serverDirFile = new File(args[argIndex++]);
 				int port = Integer.parseInt(args[argIndex++]);
 				try (FileSearchDataManager manager = new FileSearchDataManager(documentDirFile,
-						documentFile, documentIndexFile, termFile, termIndexFile, positionFile, "r"))
+						documentFile, documentIndexFile, postingFile, postingIndexFile, "r"))
 				{
 					HTTPServer server = new HTTPServer(port, new ServletRequestDeliver(serverDirFile, manager));
 					server.start();
@@ -106,6 +115,29 @@ public class Main
 				}
 			}
 			break;
+			case "test":
+				try (FileSearchDataManager manager = new FileSearchDataManager(documentDirFile,
+						documentFile, documentIndexFile, postingFile, postingIndexFile, "r"))
+				{
+					Scanner scanner = new Scanner(System.in);
+					for (;;)
+					{
+						String nextLine = scanner.nextLine();
+						if (nextLine.isEmpty())
+							break;
+						FilePostingReader reader = manager.getPostingReader(nextLine.toLowerCase());
+						System.out.println("\tcount: " + reader.getCount());
+						for (;;)
+						{
+							Posting posting = reader.read();
+							if (posting == null)
+								break;
+							System.out.println("\t\t" + posting);
+							reader.moveNext();
+						}
+					}
+				}
+				break;
 //			case "inputfile":
 //			{
 //				if (args.length < 3)

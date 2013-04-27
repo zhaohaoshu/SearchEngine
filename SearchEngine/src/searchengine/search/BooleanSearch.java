@@ -104,7 +104,7 @@ public class BooleanSearch
 		Posting[] postings = new Posting[queryCount];
 		for (int i = 0; i < queryCount; i++)
 		{
-			postings[i] = readers.get(i).read(false);
+			postings[i] = readers.get(i).read();
 			readers.get(i).moveNext();
 		}
 
@@ -117,7 +117,7 @@ public class BooleanSearch
 				if (postings[i] != null && postings[i].getDocumentID() == id)
 				{
 					values.set(i, true);
-					postings[i] = readers.get(i).read(false);
+					postings[i] = readers.get(i).read();
 					readers.get(i).moveNext();
 				}
 				else

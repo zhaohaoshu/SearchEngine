@@ -1,6 +1,6 @@
 package file.manager;
 
-import file.TermTree;
+import file.PostingTree;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -12,55 +12,47 @@ import searchengine.data.Posting;
  *
  * @author ZHS
  */
-public class TermManager implements Closeable
+public class PostingManager implements Closeable
 {
 
 	private RandomAccessFile indexAccess;
-	private RandomAccessFile termAccess;
-	private RandomAccessFile positionAccess;
+	private RandomAccessFile postingAccess;
 
-	public TermManager(File termFile, File termIndexFile, File positionFile, String mode) throws IOException
+	public PostingManager(File postingFile, File postingIndexFile, String mode) throws IOException
 	{
-		indexAccess = new RandomAccessFile(termIndexFile, mode);
+		indexAccess = new RandomAccessFile(postingIndexFile, mode);
 		if (indexAccess.length() == 0)
 			appendIndexNode();
-		termAccess = new RandomAccessFile(termFile, mode);
-		positionAccess = new RandomAccessFile(positionFile, mode);
+		postingAccess = new RandomAccessFile(postingFile, mode);
 	}
 	//<editor-fold defaultstate="collapsed" desc="Add">
 
-	public void addTermTree(TermTree termTree) throws IOException
+	public void addTermTree(PostingTree termTree) throws IOException
 	{
-		TermTree.Node root = termTree.getRoot();
+		PostingTree.Node root = termTree.getRoot();
 		addTermTreeNode(root, new IndexNode(0));
-//		Calendar time = Calendar.getInstance();
-//		System.out.println("    \t" +
-//				time.get(Calendar.HOUR) + ":" +
-//				time.get(Calendar.MINUTE) + ":" +
-//				time.get(Calendar.SECOND) + "." +
-//				(time.getTimeInMillis() % 1000));
 	}
 
-	private void addTermTreeNode(TermTree.Node node, IndexNode indexNode) throws IOException
+	private void addTermTreeNode(PostingTree.Node node, IndexNode indexNode) throws IOException
 	{
-		LinkedList<TermTree.Posting> postings = node.getPostings();
+		LinkedList<Posting> postings = node.getPostings();
 		if (!postings.isEmpty())
 		{
-			if (indexNode.readTermPointer() < 0)
-				indexNode.writeTermPointer(termAccess.length());
+			if (indexNode.readFirstPostingPointer() < 0)
+				indexNode.writeFirstPostingPointer(postingAccess.length());
 			else
-				indexNode.getTailTermNode().writeNextPointer(termAccess.length());
+				indexNode.getTailPostingNode().writeNextPointer(postingAccess.length());
 			indexNode.writePostingCount(indexNode.readPostingCount() + postings.size());
-			indexNode.writeTailPointer(termAccess.length() + 28 * (postings.size() - 1));
+			indexNode.writeTailPostingPointer(postingAccess.length() + PostingNode.SIZE * (postings.size() - 1));
 			appendPostings(postings);
 		}
-		TermTree.Node[] children = node.getChildren();
+		PostingTree.Node[] children = node.getChildren();
 		long childOffset = indexAccess.length();
 		int toAdd = 0;
 		long[] childPointers = new long[children.length];
 		for (int i = 0; i < children.length; i++)
 		{
-			TermTree.Node child = children[i];
+			PostingTree.Node child = children[i];
 			if (child != null)
 			{
 				childPointers[i] = indexNode.readChildPointer(i);
@@ -101,50 +93,39 @@ public class TermManager implements Closeable
 			indexAccess.writeLong(-1);
 	}
 
-	private void appendPostings(LinkedList<TermTree.Posting> postings) throws IOException
+	private void appendPostings(LinkedList<Posting> postings) throws IOException
 	{
-		long filePointer = termAccess.length();
-		termAccess.seek(filePointer);
+		long filePointer = postingAccess.length();
+		postingAccess.seek(filePointer);
 		int i = 0;
-		for (TermTree.Posting posting : postings)
+		for (Posting posting : postings)
 		{
 			//nextPointer
 			if (i < postings.size() - 1)
 			{
-				//8 nextPointer, 8 documentID, 4 positionCount, 8 positionPointer
-				filePointer += 28;
-				termAccess.writeLong(filePointer);
+				//8 nextPointer, 8 documentID, 4 positionCount
+				filePointer += PostingNode.SIZE;
+				postingAccess.writeLong(filePointer);
 			}
 			else
-				termAccess.writeLong(-1);
-			termAccess.writeLong(posting.getDocumentID());
-			LinkedList<Integer> positions = posting.getPositions();
+				postingAccess.writeLong(-1);
+			postingAccess.writeLong(posting.getDocumentID());
 			//positionCount
-			termAccess.writeInt(positions.size());
-			//positionPointer
-			termAccess.writeLong(positionAccess.length());
-			appendPositions(positions);
+			postingAccess.writeInt(posting.getPositionCount());
 			i++;
 		}
-	}
-
-	private void appendPositions(LinkedList<Integer> positions) throws IOException
-	{
-		positionAccess.seek(positionAccess.length());
-		for (Integer position : positions)
-			positionAccess.writeInt(position);
 	}
 	//</editor-fold>
 	//<editor-fold defaultstate="collapsed" desc="Get">
 
-	public TermPointer getTermPointer(String term) throws IOException
+	public PostingPointer getTermPointer(String term) throws IOException
 	{
 		IndexNode indexNode = new IndexNode(0);
 		for (int i = 0; i < term.length() && indexNode != null; i++)
 			indexNode = indexNode.getChildNode(term.charAt(i) - 'a', false);
 		if (indexNode == null)
-			return new TermPointer(null, 0);
-		return new TermPointer(indexNode.getTermNode(), indexNode.readPostingCount());
+			return new PostingPointer(null, 0);
+		return new PostingPointer(indexNode.getFirstPostingNode(), indexNode.readPostingCount());
 	}
 	//</editor-fold>
 
@@ -152,19 +133,18 @@ public class TermManager implements Closeable
 	public void close() throws IOException
 	{
 		indexAccess.close();
-		termAccess.close();
-		positionAccess.close();
+		postingAccess.close();
 	}
 
-	public class TermPointer
+	public class PostingPointer
 	{
 
-		private TermNode termNode;
+		private PostingNode postingNode;
 		private long postingCount;
 
-		private TermPointer(TermNode termNode, long postingCount)
+		private PostingPointer(PostingNode termNode, long postingCount)
 		{
-			this.termNode = termNode;
+			this.postingNode = termNode;
 			this.postingCount = postingCount;
 		}
 
@@ -185,17 +165,17 @@ public class TermManager implements Closeable
 		 */
 		public void moveNext() throws IOException
 		{
-			termNode = termNode.getNext();
+			postingNode = postingNode.getNext();
 		}
 
-		public Posting getPosting(boolean addPositions) throws IOException
+		public Posting getPosting() throws IOException
 		{
-			return termNode.getPosting(addPositions);
+			return postingNode.getPosting();
 		}
 
 		public boolean end()
 		{
-			return termNode == null;
+			return postingNode == null;
 		}
 	}
 
@@ -213,32 +193,32 @@ public class TermManager implements Closeable
 	private class IndexNode extends Node
 	{
 
-		static final int SIZE = 29 * 8;
 		//termPointer
 		//postingCount
 		//tailPointer
 		//childPointer*26
+		static final int SIZE = 29 * 8;
 
 		public IndexNode(long base)
 		{
 			super(base);
 		}
 
-		long readTermPointer() throws IOException
+		long readFirstPostingPointer() throws IOException
 		{
 			indexAccess.seek(base);
 			return indexAccess.readLong();
 		}
 
-		TermNode getTermNode() throws IOException
+		PostingNode getFirstPostingNode() throws IOException
 		{
-			long termPointer = readTermPointer();
-			if (termPointer < 0)
+			long firstPostingPointer = readFirstPostingPointer();
+			if (firstPostingPointer < 0)
 				return null;
-			return new TermNode(termPointer);
+			return new PostingNode(firstPostingPointer);
 		}
 
-		void writeTermPointer(long value) throws IOException
+		void writeFirstPostingPointer(long value) throws IOException
 		{
 			indexAccess.seek(base);
 			indexAccess.writeLong(value);
@@ -256,21 +236,21 @@ public class TermManager implements Closeable
 			indexAccess.writeLong(value);
 		}
 
-		long readTailPointer() throws IOException
+		long readTailPostingPointer() throws IOException
 		{
 			indexAccess.seek(base + 16);
 			return indexAccess.readLong();
 		}
 
-		TermNode getTailTermNode() throws IOException
+		PostingNode getTailPostingNode() throws IOException
 		{
-			long tailPointer = readTailPointer();
+			long tailPointer = readTailPostingPointer();
 			if (tailPointer < 0)
 				return null;
-			return new TermNode(tailPointer);
+			return new PostingNode(tailPointer);
 		}
 
-		void writeTailPointer(long value) throws IOException
+		void writeTailPostingPointer(long value) throws IOException
 		{
 			indexAccess.seek(base + 16);
 			indexAccess.writeLong(value);
@@ -304,52 +284,45 @@ public class TermManager implements Closeable
 		}
 	}
 
-	private class TermNode extends Node
+	private class PostingNode extends Node
 	{
 
 		//nextPointer
 		//documentID
 		//positionCount
-		//positionPointer
-		public TermNode(long base)
+		static final int SIZE = 20;
+
+		public PostingNode(long base)
 		{
 			super(base);
 		}
 
-		Posting getPosting(boolean addPositions) throws IOException
+		Posting getPosting() throws IOException
 		{
-			termAccess.seek(base + 8);
-			long documentID = termAccess.readLong();
-			int positionCount = termAccess.readInt();
-			if (addPositions)
-			{
-				positionAccess.seek(termAccess.readLong());
-				int[] positions = new int[positionCount];
-				for (int i = 0; i < positionCount; i++)
-					positions[i] = positionAccess.readInt();
-				return new Posting(documentID, positions);
-			}
+			postingAccess.seek(base + 8);
+			long documentID = postingAccess.readLong();
+			int positionCount = postingAccess.readInt();
 			return new Posting(documentID, positionCount);
 		}
 
 		long readNextPointer() throws IOException
 		{
-			termAccess.seek(base);
-			return termAccess.readLong();
+			postingAccess.seek(base);
+			return postingAccess.readLong();
 		}
 
 		void writeNextPointer(long value) throws IOException
 		{
-			termAccess.seek(base);
-			termAccess.writeLong(value);
+			postingAccess.seek(base);
+			postingAccess.writeLong(value);
 		}
 
-		TermNode getNext() throws IOException
+		PostingNode getNext() throws IOException
 		{
 			long nextPointer = readNextPointer();
 			if (nextPointer < 0)
 				return null;
-			return new TermNode(nextPointer);
+			return new PostingNode(nextPointer);
 		}
 	}
 }
