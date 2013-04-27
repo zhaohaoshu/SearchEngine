@@ -18,7 +18,7 @@ public class Main
 	{
 		System.out.println("Usage: searchengine <dictionary_dir> <document_dir> <action>");
 		System.out.println("<action> can be one of the following:");
-		System.out.println("  loaddir");
+		System.out.println("  loaddir <max_posting_count> <max_position_count>");
 		System.out.println("  httpserver <server_dir> <port>");
 //		System.out.println("  inputfile <input_file>");
 //		System.out.println("  cmdline");
@@ -26,25 +26,57 @@ public class Main
 
 	public static void main(String[] args)
 	{
-		if (args.length < 3)
+//		switch (new Scanner(System.in).nextLine())
+//		{
+//			case "r":
+//				args = new String[]
+//				{
+//					"E:\\File\\School\\p\\2\\网络信息体系结构\\resource\\gov\\dictionary",
+//					"E:\\File\\School\\p\\2\\网络信息体系结构\\resource\\gov\\part",
+//					"loaddir",
+//					"-1",
+//					"1000",
+//				};
+//				break;
+//			default:
+//				args = new String[]
+//				{
+//					"E:\\File\\School\\p\\2\\网络信息体系结构\\resource\\gov\\dictionary",
+//					"E:\\File\\School\\p\\2\\网络信息体系结构\\resource\\gov\\part",
+//					"httpserver",
+//					"E:\\File\\Program\\SearchEngine\\httpserver",
+//					"8888"
+//				};
+//				break;
+//		}
+		int argIndex = 0;
+		if (argIndex + 2 > args.length)
 		{
 			printUsage();
 			return;
 		}
-		File dictionaryDirFile = new File(args[0]);
+		File dictionaryDirFile = new File(args[argIndex++]);
 		File documentFile = new File(dictionaryDirFile, "document");
 		File documentIndexFile = new File(dictionaryDirFile, "document_index");
 		File termFile = new File(dictionaryDirFile, "term");
 		File termIndexFile = new File(dictionaryDirFile, "term_index");
-		File documentDirFile = new File(args[1]);
-		switch (args[2])
+		File positionFile = new File(dictionaryDirFile, "position");
+		File documentDirFile = new File(args[argIndex++]);
+		switch (args[argIndex++])
 		{
 			case "loaddir":
 			{
-				try (FileSearchDataManager manager = new FileSearchDataManager(documentDirFile,
-						documentFile, documentIndexFile, termFile, termIndexFile, "rw"))
+				if (argIndex + 2 > args.length)
 				{
-					manager.loadDocument(documentDirFile);
+					printUsage();
+					return;
+				}
+				long maxPostingCount = Long.parseLong(args[argIndex++]);
+				long maxPositionCount = Long.parseLong(args[argIndex++]);
+				try (FileSearchDataManager manager = new FileSearchDataManager(documentDirFile,
+						documentFile, documentIndexFile, termFile, termIndexFile, positionFile, "rw"))
+				{
+					manager.loadDocument(documentDirFile, maxPostingCount, maxPositionCount);
 					long documentCount = manager.getDocumentCount();
 					System.out.println("Loaded " + documentCount + " documents");
 					Scanner scanner = new Scanner(System.in);
@@ -56,15 +88,15 @@ public class Main
 			break;
 			case "httpserver":
 			{
-				if (args.length < 5)
+				if (argIndex + 2 > args.length)
 				{
 					printUsage();
 					return;
 				}
-				File serverDirFile = new File(args[3]);
-				int port = Integer.parseInt(args[4]);
+				File serverDirFile = new File(args[argIndex++]);
+				int port = Integer.parseInt(args[argIndex++]);
 				try (FileSearchDataManager manager = new FileSearchDataManager(documentDirFile,
-						documentFile, documentIndexFile, termFile, termIndexFile, "r"))
+						documentFile, documentIndexFile, termFile, termIndexFile, positionFile, "r"))
 				{
 					HTTPServer server = new HTTPServer(port, new ServletRequestDeliver(serverDirFile, manager));
 					server.start();

@@ -12,46 +12,31 @@ DocumentIndex:
 	...
 
 Term:
-	[abc] next=2 count=30 tail=123
-		[1] next=221 id=2 size=87 positions=...
-		[2] next=234 id=4 size=30 positions=...
-		[3] next=563 id=7 size=19 positions=...
+	TermNode:
+		nextPointer
+		documentID
+		positionCount
+		positionPointer
+	[abc]
+		[1] nextPointer=221 documentID=2 positionCount=87 positionPointer=2
 		...
-		[30] next=-1 id=412 size=62 positions=...
-
-	[xyz] next=4 count=346 tail=56
-		[1] next=21 id=11 size=99 positions=...
-		[2] next=45 id=44 size=41 positions=...
-		[3] next=92 id=78 size=67 positions=...
-		...
-		[346] next=-1 id=412 size=62 positions=...
+		[30] nextPointer=-1 documentID=412 positionCount=62 positionPointer=5
 
 TermIndex:
+	IndexNode:
+		termPointer
+		postingCount
+		tailPointer
+		childPointer*26
 	---
-	term_pointer=-1
-	[a] child_pointer=2
-	[b] child_pointer=-1
-	...
-	[x] child_pointer=6
-	...
-	[z] child_pointer=-1
+		termPointer=-1
+		postingCount=-1
+		tailPointer=-1
+		[a] childPointer=2
+		[b] childPointer=-1
+		...
+		[x] childPointer=6
+		...
+		[z] childPointer=-1
 	---
-	---
-	offset_pointer=-1
-	[a] child_pointer=-1
-	[b] child_pointer=46
-	...
-	[y] child_pointer=62
-	[z] child_pointer=-1
-	---
-	---
-	offset_pointer=-1
-	[a] child_pointer=-1
-	[b] child_pointer=-1
-	[c] child_pointer=-1
-	...
-	[z] child_pointer=16
-	---
-
-
 

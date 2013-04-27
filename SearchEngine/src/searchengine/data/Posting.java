@@ -1,7 +1,6 @@
 package searchengine.data;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 /**
  *
@@ -11,24 +10,24 @@ public class Posting
 {
 
 	private long documentID;
-	private int size;
+	private int positionCount;
 	private int[] positions;
 
 	/**
 	 *
 	 * @param documentID
-	 * @param size the number of positions
+	 * @param positionCount the number of positions
 	 */
-	public Posting(long documentID, int size)
+	public Posting(long documentID, int positionCount)
 	{
 		this.documentID = documentID;
-		this.size = size;
+		this.positionCount = positionCount;
 	}
 
 	public Posting(long documentID, int[] positions)
 	{
 		this.documentID = documentID;
-		this.size = positions.length;
+		this.positionCount = positions.length;
 		this.positions = positions;
 	}
 
@@ -43,9 +42,9 @@ public class Posting
 	 *
 	 * @return
 	 */
-	public int getSize()
+	public int getPositionCount()
 	{
-		return size;
+		return positionCount;
 	}
 
 	public int[] getPositions()
@@ -61,10 +60,10 @@ public class Posting
 			list = null;
 		else
 		{
-			list = new ArrayList<>(size);
+			list = new ArrayList<>(positionCount);
 			for (int position : positions)
 				list.add(position);
 		}
-		return "{" + documentID + "," + size + "," + list + '}';
+		return "{" + documentID + "," + positionCount + "," + list + '}';
 	}
 }

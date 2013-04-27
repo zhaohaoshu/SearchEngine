@@ -86,8 +86,8 @@ public class VectorSearch
 		Posting[] postings = new Posting[entryCount];
 		for (int i = 0; i < entryCount; i++)
 		{
-			readers.get(i).moveNext();
 			postings[i] = readers.get(i).read(false);
+			readers.get(i).moveNext();
 		}
 
 		for (;;)
@@ -101,10 +101,10 @@ public class VectorSearch
 			for (int i = 0; i < entryCount; i++)
 				if (postings[i] != null && postings[i].getDocumentID() == id)
 				{
-					double documentProduct = 1 + Math.log(postings[i].getSize());
+					double documentProduct = 1 + Math.log(postings[i].getPositionCount());
 					score += queryProduct[i] * documentProduct;
-					readers.get(i).moveNext();
 					postings[i] = readers.get(i).read(false);
+					readers.get(i).moveNext();
 				}
 			score /= manager.getDocumentLength(id);
 			writer.write(score, id);

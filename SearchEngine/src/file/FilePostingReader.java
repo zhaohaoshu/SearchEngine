@@ -36,7 +36,7 @@ public class FilePostingReader extends PostingReader
 		try
 		{
 			if (!termPointer.end())
-				termManager.moveNext(termPointer);
+				termPointer.moveNext();
 		}
 		catch (IOException ex)
 		{
@@ -51,7 +51,7 @@ public class FilePostingReader extends PostingReader
 			return null;
 		try
 		{
-			return termManager.getPosting(termPointer, addPositions);
+			return termPointer.getPosting(addPositions);
 		}
 		catch (IOException ex)
 		{
@@ -63,6 +63,6 @@ public class FilePostingReader extends PostingReader
 	@Override
 	public long getCount()
 	{
-		return termPointer.getCount();
+		return termPointer.getPostingCount();
 	}
 }

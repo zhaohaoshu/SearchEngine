@@ -91,10 +91,7 @@ public class PositionalSearch
 		int queryCount = readers.size();
 		Posting[] postings = new Posting[queryCount];
 		for (int i = 0; i < queryCount; i++)
-		{
-			readers.get(i).moveNext();
 			postings[i] = readers.get(i).read(false);
-		}
 
 		int[][] positions = new int[queryCount][];
 		for (;;)

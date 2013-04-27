@@ -14,7 +14,6 @@ import file.manager.TermManager;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.util.Calendar;
 import searchengine.data.SearchDataManager;
 
 /**
@@ -30,14 +29,14 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 
 	public FileSearchDataManager(File documentDirFile,
 			File documentFile, File documentIndexFile,
-			File termFile, File termIndexFile,
+			File termFile, File termIndexFile, File positionFile,
 			String mode)
 	{
 		try
 		{
 			this.documentDirFile = documentDirFile;
 			documentManager = new DocumentManager(documentFile, documentIndexFile, mode);
-			termManager = new TermManager(termFile, termIndexFile, mode);
+			termManager = new TermManager(termFile, termIndexFile, positionFile, mode);
 		}
 		catch (IOException ex)
 		{
@@ -46,22 +45,29 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 	}
 	//<editor-fold defaultstate="collapsed" desc="Add Document">
 
-	public void loadDocument(File file)
+	public void loadDocument(File file, long maxPostingCount, long maxPositionCount)
+	{
+		TermTree termTree = new TermTree(termManager, maxPostingCount, maxPositionCount);
+		loadDocument(file, termTree);
+		termTree.flush();
+	}
+
+	private void loadDocument(File file, TermTree termTree)
 	{
 		if (file.isDirectory())
 		{
 			System.out.println("Read directory " + file);
 			for (File childFile : file.listFiles())
-				loadDocument(childFile);
+				loadDocument(childFile, termTree);
 		}
 		else
 		{
-			System.out.println("  Read file " + file);
-			readParadiseFile(file);
+			System.out.println("\tRead file " + file);
+			readParadiseFile(file, termTree);
 		}
 	}
 
-	public void readParadiseFile(File file)
+	public void readParadiseFile(File file, TermTree termTree)
 	{
 		try
 		{
@@ -99,7 +105,7 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 					}
 					else if (lastRead == 31)
 					{
-						addDocument(new ByteArrayInputStream(body), title,
+						addDocument(termTree, new ByteArrayInputStream(body), title,
 								documentDirFile.toURI().relativize(file.toURI()).getRawPath(),
 								bodyStart, bodyEnd, url);
 						builder.clear();
@@ -119,18 +125,18 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 		}
 	}
 
-	public boolean addDocument(InputStream inputStream, String name, String pathname, long start, long end, String url)
+	public boolean addDocument(TermTree termTree, InputStream inputStream, String name, String pathname, long start, long end, String url)
 	{
-		long startTime = Calendar.getInstance().getTime().getTime();
 		Map<String, LinkedList<Integer>> map = new HashMap<>();
 		DocumentAnalyser.tokenizeDocument(inputStream, map);
 		double length = DocumentAnalyser.calcDocumentLength(map);
 		try
 		{
 			long documentID = documentManager.addNewDocument(name, length, pathname, start, end, url);
+//			System.out.println("    Add\t" + documentID + "\t" + pathname);
 			for (Map.Entry<String, LinkedList<Integer>> entry : map.entrySet())
-				termManager.addPosting(entry.getKey(), documentID, entry.getValue());
-			System.out.println("    Add\t" + documentID + "\t" + pathname + "\t" + (Calendar.getInstance().getTime().getTime() - startTime));
+				termTree.add(entry.getKey(), documentID, entry.getValue());
+//			termManager.addPosting(entry.getKey(), documentID, entry.getValue());
 			return true;
 		}
 		catch (IOException ex)

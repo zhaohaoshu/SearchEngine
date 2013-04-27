@@ -1,11 +1,11 @@
 package file.manager;
 
+import file.TermTree;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.Calendar;
-import java.util.List;
+import java.util.LinkedList;
 import searchengine.data.Posting;
 
 /**
@@ -15,200 +15,157 @@ import searchengine.data.Posting;
 public class TermManager implements Closeable
 {
 
-	private static final int CHILD_POINTER_SIZE = Long.SIZE / 8;
-	private static final int TERM_POINTER_SIZE = Long.SIZE / 8;
-	private static final int NEXT_POINTER_SIZE = Long.SIZE / 8;
-	private static final int COUNT_SIZE = Long.SIZE / 8;
 	private RandomAccessFile indexAccess;
 	private RandomAccessFile termAccess;
+	private RandomAccessFile positionAccess;
 
-	public TermManager(File termFile, File termIndexFile, String mode) throws IOException
+	public TermManager(File termFile, File termIndexFile, File positionFile, String mode) throws IOException
 	{
 		indexAccess = new RandomAccessFile(termIndexFile, mode);
 		if (indexAccess.length() == 0)
 			appendIndexNode();
 		termAccess = new RandomAccessFile(termFile, mode);
+		positionAccess = new RandomAccessFile(positionFile, mode);
 	}
 	//<editor-fold defaultstate="collapsed" desc="Add">
 
-	public void addPosting(String term, long documentID, List<Integer> positions) throws IOException
+	public void addTermTree(TermTree termTree) throws IOException
 	{
-//		long startTermTime = Calendar.getInstance().getTime().getTime();
-		long termPointer = getTermPointer(term, true);
-//		System.out.println("term:\t\t" + (Calendar.getInstance().getTime().getTime() - startTermTime) + "\t" + term);
-//		long startPostingTime = Calendar.getInstance().getTime().getTime();
-		long postingPointer = appendPosting(documentID, positions);
+		TermTree.Node root = termTree.getRoot();
+		addTermTreeNode(root, new IndexNode(0));
+//		Calendar time = Calendar.getInstance();
+//		System.out.println("    \t" +
+//				time.get(Calendar.HOUR) + ":" +
+//				time.get(Calendar.MINUTE) + ":" +
+//				time.get(Calendar.SECOND) + "." +
+//				(time.getTimeInMillis() % 1000));
+	}
 
-		termAccess.seek(termPointer + NEXT_POINTER_SIZE);
-		long count = termAccess.readLong();
-		long tailPointer = termAccess.readLong();
-		//count & tail
-		termAccess.seek(termPointer + NEXT_POINTER_SIZE);
-		termAccess.writeLong(count + 1);
-		termAccess.writeLong(postingPointer);
-		//next
-		termAccess.seek(tailPointer);
-		termAccess.writeLong(postingPointer);
-//		System.out.println("post:\t\t" + (Calendar.getInstance().getTime().getTime() - startPostingTime) + "\t" + term);
+	private void addTermTreeNode(TermTree.Node node, IndexNode indexNode) throws IOException
+	{
+		LinkedList<TermTree.Posting> postings = node.getPostings();
+		if (!postings.isEmpty())
+		{
+			if (indexNode.readTermPointer() < 0)
+				indexNode.writeTermPointer(termAccess.length());
+			else
+				indexNode.getTailTermNode().writeNextPointer(termAccess.length());
+			indexNode.writePostingCount(indexNode.readPostingCount() + postings.size());
+			indexNode.writeTailPointer(termAccess.length() + 28 * (postings.size() - 1));
+			appendPostings(postings);
+		}
+		TermTree.Node[] children = node.getChildren();
+		long childOffset = indexAccess.length();
+		int toAdd = 0;
+		long[] childPointers = new long[children.length];
+		for (int i = 0; i < children.length; i++)
+		{
+			TermTree.Node child = children[i];
+			if (child != null)
+			{
+				childPointers[i] = indexNode.readChildPointer(i);
+				if (childPointers[i] < 0)
+				{
+					indexNode.writeChildPointer(i, childOffset);
+					childPointers[i] = childOffset;
+					childOffset += IndexNode.SIZE;
+					toAdd++;
+				}
+			}
+			else
+				childPointers[i] = -1;
+		}
+		for (int i = 0; i < toAdd; i++)
+			appendIndexNode();
+		for (int i = 0; i < children.length; i++)
+			if (childPointers[i] >= 0)
+				addTermTreeNode(children[i], new IndexNode(childPointers[i]));
 	}
 
 	/**
 	 * Append a new index node to index file.
 	 *
-	 * @return the start offset of the new index node.
 	 * @throws IOException
 	 */
-	private long appendIndexNode() throws IOException
+	private void appendIndexNode() throws IOException
 	{
-		long length = indexAccess.length();
-		indexAccess.seek(length);
-		//offset pointer
+		indexAccess.seek(indexAccess.length());
+		//termPointer
+		indexAccess.writeLong(-1);
+		//postingCount
+		indexAccess.writeLong(0);
+		//tailPointer
 		indexAccess.writeLong(-1);
 		//child pointer
 		for (int i = 0; i < 26; i++)
 			indexAccess.writeLong(-1);
-		return length;
 	}
 
-	/**
-	 * Append a new term to term file
-	 *
-	 * @return the start offset of the new term
-	 * @throws IOException
-	 */
-	private long appendTerm() throws IOException
+	private void appendPostings(LinkedList<TermTree.Posting> postings) throws IOException
 	{
-		long length = termAccess.length();
-		termAccess.seek(length);
-		//next
-		termAccess.writeLong(-1);
-		//count
-		termAccess.writeLong(0);
-		//tail
-		termAccess.writeLong(length);
-		return length;
+		long filePointer = termAccess.length();
+		termAccess.seek(filePointer);
+		int i = 0;
+		for (TermTree.Posting posting : postings)
+		{
+			//nextPointer
+			if (i < postings.size() - 1)
+			{
+				//8 nextPointer, 8 documentID, 4 positionCount, 8 positionPointer
+				filePointer += 28;
+				termAccess.writeLong(filePointer);
+			}
+			else
+				termAccess.writeLong(-1);
+			termAccess.writeLong(posting.getDocumentID());
+			LinkedList<Integer> positions = posting.getPositions();
+			//positionCount
+			termAccess.writeInt(positions.size());
+			//positionPointer
+			termAccess.writeLong(positionAccess.length());
+			appendPositions(positions);
+			i++;
+		}
 	}
 
-	/**
-	 * Append a new posting, including the document ID, size of positions, and
-	 * positions, to the end of term file.
-	 *
-	 * @param documentID
-	 * @param positions
-	 * @return the start offset of the new posting
-	 * @throws IOException
-	 */
-	private long appendPosting(long documentID, List<Integer> positions) throws IOException
+	private void appendPositions(LinkedList<Integer> positions) throws IOException
 	{
-		long length = termAccess.length();
-		termAccess.seek(length);
-		//next
-		termAccess.writeLong(-1);
-		termAccess.writeLong(documentID);
-		termAccess.writeInt(positions.size());
+		positionAccess.seek(positionAccess.length());
 		for (Integer position : positions)
-			termAccess.writeInt(position);
-		return length;
+			positionAccess.writeInt(position);
 	}
 	//</editor-fold>
 	//<editor-fold defaultstate="collapsed" desc="Get">
 
 	public TermPointer getTermPointer(String term) throws IOException
 	{
-		long termPointer = getTermPointer(term, false);
-		if (termPointer < 0)
-			return new TermPointer(-1, 0);
-		termAccess.seek(termPointer + NEXT_POINTER_SIZE);
-		long count = termAccess.readLong();
-		return new TermPointer(termPointer, count);
-	}
-
-	/**
-	 * Get the pointer to the next posting
-	 *
-	 * @param termPointer
-	 * @return
-	 * @throws IOException
-	 */
-	public void moveNext(TermPointer termPointer) throws IOException
-	{
-		termAccess.seek(termPointer.termPointer);
-		termPointer.termPointer = termAccess.readLong();
-	}
-
-	public Posting getPosting(TermPointer termPointer, boolean addPositions) throws IOException
-	{
-		termAccess.seek(termPointer.termPointer);
-		termAccess.skipBytes(NEXT_POINTER_SIZE);
-		long documentID = termAccess.readLong();
-		int size = termAccess.readInt();
-		if (addPositions)
-		{
-			int[] positions = new int[size];
-			for (int i = 0; i < size; i++)
-				positions[i] = termAccess.readInt();
-			return new Posting(documentID, positions);
-		}
-		return new Posting(documentID, size);
+		IndexNode indexNode = new IndexNode(0);
+		for (int i = 0; i < term.length() && indexNode != null; i++)
+			indexNode = indexNode.getChildNode(term.charAt(i) - 'a', false);
+		if (indexNode == null)
+			return new TermPointer(null, 0);
+		return new TermPointer(indexNode.getTermNode(), indexNode.readPostingCount());
 	}
 	//</editor-fold>
-
-	/**
-	 * Get the offset of the term in term file.
-	 *
-	 * @param term
-	 * @param add
-	 * @return the offset of the term in term file
-	 * @throws IOException
-	 */
-	private long getTermPointer(String term, boolean add) throws IOException
-	{
-		indexAccess.seek(0);
-		for (int i = 0; i < term.length(); i++)
-		{
-			indexAccess.skipBytes(TERM_POINTER_SIZE + (term.charAt(i) - 'a') * CHILD_POINTER_SIZE);
-			long childPointer = indexAccess.readLong();
-			if (childPointer < 0)
-			{
-				if (!add)
-					return -1;
-				long childPointerOffset = indexAccess.getFilePointer() - CHILD_POINTER_SIZE;
-				childPointer = appendIndexNode();
-				indexAccess.seek(childPointerOffset);
-				indexAccess.writeLong(childPointer);
-			}
-			indexAccess.seek(childPointer);
-		}
-		long termPointer = indexAccess.readLong();
-		if (termPointer < 0)
-		{
-			if (!add)
-				return -1;
-			long termPointerOffset = indexAccess.getFilePointer() - TERM_POINTER_SIZE;
-			termPointer = appendTerm();
-			indexAccess.seek(termPointerOffset);
-			indexAccess.writeLong(termPointer);
-		}
-		return termPointer;
-	}
 
 	@Override
 	public void close() throws IOException
 	{
 		indexAccess.close();
 		termAccess.close();
+		positionAccess.close();
 	}
 
 	public class TermPointer
 	{
 
-		private long termPointer;
-		private long count;
+		private TermNode termNode;
+		private long postingCount;
 
-		private TermPointer(long termPointer, long count)
+		private TermPointer(TermNode termNode, long postingCount)
 		{
-			this.termPointer = termPointer;
-			this.count = count;
+			this.termNode = termNode;
+			this.postingCount = postingCount;
 		}
 
 		/**
@@ -216,14 +173,183 @@ public class TermManager implements Closeable
 		 *
 		 * @return
 		 */
-		public long getCount()
+		public long getPostingCount()
 		{
-			return count;
+			return postingCount;
+		}
+
+		/**
+		 * Move to the next posting
+		 *
+		 * @throws IOException
+		 */
+		public void moveNext() throws IOException
+		{
+			termNode = termNode.getNext();
+		}
+
+		public Posting getPosting(boolean addPositions) throws IOException
+		{
+			return termNode.getPosting(addPositions);
 		}
 
 		public boolean end()
 		{
-			return termPointer < 0;
+			return termNode == null;
+		}
+	}
+
+	private class Node
+	{
+
+		long base;
+
+		public Node(long base)
+		{
+			this.base = base;
+		}
+	}
+
+	private class IndexNode extends Node
+	{
+
+		static final int SIZE = 29 * 8;
+		//termPointer
+		//postingCount
+		//tailPointer
+		//childPointer*26
+
+		public IndexNode(long base)
+		{
+			super(base);
+		}
+
+		long readTermPointer() throws IOException
+		{
+			indexAccess.seek(base);
+			return indexAccess.readLong();
+		}
+
+		TermNode getTermNode() throws IOException
+		{
+			long termPointer = readTermPointer();
+			if (termPointer < 0)
+				return null;
+			return new TermNode(termPointer);
+		}
+
+		void writeTermPointer(long value) throws IOException
+		{
+			indexAccess.seek(base);
+			indexAccess.writeLong(value);
+		}
+
+		long readPostingCount() throws IOException
+		{
+			indexAccess.seek(base + 8);
+			return indexAccess.readLong();
+		}
+
+		void writePostingCount(long value) throws IOException
+		{
+			indexAccess.seek(base + 8);
+			indexAccess.writeLong(value);
+		}
+
+		long readTailPointer() throws IOException
+		{
+			indexAccess.seek(base + 16);
+			return indexAccess.readLong();
+		}
+
+		TermNode getTailTermNode() throws IOException
+		{
+			long tailPointer = readTailPointer();
+			if (tailPointer < 0)
+				return null;
+			return new TermNode(tailPointer);
+		}
+
+		void writeTailPointer(long value) throws IOException
+		{
+			indexAccess.seek(base + 16);
+			indexAccess.writeLong(value);
+		}
+
+		long readChildPointer(int i) throws IOException
+		{
+			indexAccess.seek(base + (i + 3) * 8);
+			return indexAccess.readLong();
+		}
+
+		void writeChildPointer(int i, long value) throws IOException
+		{
+
+			indexAccess.seek(base + (i + 3) * 8);
+			indexAccess.writeLong(value);
+		}
+
+		IndexNode getChildNode(int i, boolean add) throws IOException
+		{
+			long childPointer = readChildPointer(i);
+			if (childPointer < 0)
+			{
+				if (!add)
+					return null;
+				childPointer = indexAccess.length();
+				writeChildPointer(i, childPointer);
+				appendIndexNode();
+			}
+			return new IndexNode(childPointer);
+		}
+	}
+
+	private class TermNode extends Node
+	{
+
+		//nextPointer
+		//documentID
+		//positionCount
+		//positionPointer
+		public TermNode(long base)
+		{
+			super(base);
+		}
+
+		Posting getPosting(boolean addPositions) throws IOException
+		{
+			termAccess.seek(base + 8);
+			long documentID = termAccess.readLong();
+			int positionCount = termAccess.readInt();
+			if (addPositions)
+			{
+				positionAccess.seek(termAccess.readLong());
+				int[] positions = new int[positionCount];
+				for (int i = 0; i < positionCount; i++)
+					positions[i] = positionAccess.readInt();
+				return new Posting(documentID, positions);
+			}
+			return new Posting(documentID, positionCount);
+		}
+
+		long readNextPointer() throws IOException
+		{
+			termAccess.seek(base);
+			return termAccess.readLong();
+		}
+
+		void writeNextPointer(long value) throws IOException
+		{
+			termAccess.seek(base);
+			termAccess.writeLong(value);
+		}
+
+		TermNode getNext() throws IOException
+		{
+			long nextPointer = readNextPointer();
+			if (nextPointer < 0)
+				return null;
+			return new TermNode(nextPointer);
 		}
 	}
 }
