@@ -35,7 +35,7 @@ public class FilePostingReader extends PostingReader
 	{
 		try
 		{
-			if (!postingPointer.end())
+			if (!postingPointer.isEnd())
 				postingPointer.moveNext();
 		}
 		catch (IOException ex)
@@ -47,7 +47,7 @@ public class FilePostingReader extends PostingReader
 	@Override
 	public Posting read()
 	{
-		if (postingPointer.end())
+		if (postingPointer.isEnd())
 			return null;
 		try
 		{

@@ -3,7 +3,6 @@ package file;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -13,6 +12,7 @@ import file.manager.PostingManager;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.TreeMap;
 import searchengine.data.SearchDataManager;
 
 /**
@@ -55,67 +55,84 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 	{
 		if (file.isDirectory())
 		{
-			System.out.println("Read directory " + file);
+			FileLogger.log("Read directory " + file);
 			for (File childFile : file.listFiles())
 				loadDocument(childFile, postingTree);
 		}
 		else
 		{
-			System.out.println("\tRead file " + file);
+			FileLogger.log("\tRead file " + file);
 			readParadiseFile(file, postingTree);
 		}
 	}
 
 	public void readParadiseFile(File file, PostingTree postingTree)
 	{
-		try
+		try (OffsetReader reader = new OffsetReader(file);)
 		{
-			FileInputStream inputStream = new FileInputStream(file);
 			ByteArrayBuilder builder = new ByteArrayBuilder();
-			int lastRead = -1;
-			long startOffset = -1;
+			Map<String, Integer> map = null;
 			String title = null;
-			byte[] body = null;
-			String url = null;
+			String pathname = documentDirFile.toURI().relativize(file.toURI()).getRawPath();
 			long bodyStart = -1;
 			long bodyEnd = -1;
-			for (long offset = 0;; offset++)
+			String url = null;
+			for (;;)
 			{
-				int read = inputStream.read();
-				if (read < 0)
+				int read;
+				while ((read = reader.read()) >= 0 &&
+						read != '=' && read != 31)
+					builder.append((byte) read);
+				if (read < 0)//end of a file
 					break;
-				if (builder.length() == 0)
-					startOffset = offset;
-				builder.append((byte) read);
-				if (read == '\n')
-					if (lastRead == 30)
+				if (read == 31)//end of a document
+				{
+					addDocument(postingTree, map, title, pathname, bodyStart, bodyEnd, url);
+					reader.read();//read the '\n'
+				}
+				else //if (reader.getCurrentRead() == '=')
+				{
+					if (builder.equalsString("body"))
 					{
-						if (builder.startsWith("body="))
-						{
-							body = builder.subBytes(5, builder.length() - 2);
-							bodyStart = startOffset + 5;
-							bodyEnd = offset - 1;
-						}
-						else if (builder.startsWith("title="))
-							title = builder.subString(6, builder.length() - 2);
-						else if (builder.startsWith("url="))
-							url = builder.subString(4, builder.length() - 2);
 						builder.clear();
+						map = new TreeMap<>();
+						bodyStart = reader.getOffset();
+						while ((read = reader.read()) != 30)
+							if ('a' <= read && read <= 'z')
+								builder.append((byte) read);
+							else if ('A' <= read && read <= 'Z')
+								builder.append((byte) (read - 'A' + 'a'));
+							else if (!builder.isEmpty())//not a letter
+							{
+								String term = builder.toString();
+								Integer positionCount = map.get(term);
+								if (positionCount == null)
+									map.put(term, 1);
+								else
+									map.put(term, positionCount + 1);
+								builder.clear();
+							}
+						bodyEnd = reader.getOffset();
 					}
-					else if (lastRead == 31)
+					else if (builder.equalsString("title"))
 					{
-						addDocument(postingTree, new ByteArrayInputStream(body), title,
-								documentDirFile.toURI().relativize(file.toURI()).getRawPath(),
-								bodyStart, bodyEnd, url);
 						builder.clear();
-						startOffset = -1;
-						body = null;
-						title = null;
-						url = null;
-						bodyStart = -1;
-						bodyEnd = -1;
+						while ((read = reader.read()) != 30)
+							builder.append((byte) read);
+						title = builder.toString();
 					}
-				lastRead = read;
+					else if (builder.equalsString("url"))
+					{
+						builder.clear();
+						while ((read = reader.read()) != 30)
+							builder.append((byte) read);
+						url = builder.toString();
+					}
+					else
+						while (reader.read() != 30);
+					reader.read();//read the '\n'
+					builder.clear();
+				}
 			}
 		}
 		catch (IOException ex)
@@ -124,10 +141,8 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 		}
 	}
 
-	public boolean addDocument(PostingTree postingTree, InputStream inputStream, String name, String pathname, long start, long end, String url)
+	public boolean addDocument(PostingTree postingTree, Map<String, Integer> map, String name, String pathname, long start, long end, String url)
 	{
-		Map<String, Integer> map = new HashMap<>();
-		DocumentAnalyser.tokenizeDocument(inputStream, map);
 		double length = DocumentAnalyser.calcDocumentLength(map);
 		try
 		{

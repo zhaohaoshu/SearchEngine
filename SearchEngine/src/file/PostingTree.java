@@ -62,17 +62,17 @@ public class PostingTree
 			if (documentCount <= 0)
 				documentCount = 1;
 			long flushStartTime = Calendar.getInstance().getTimeInMillis();
-			System.out.println("\t\tflushing\t" +
-					documentCount + "\t(" +
+			FileLogger.log("\t\tflushing " +
+					documentCount + "(" +
 					(lastDocumentID + 1) + "~" + currentDocumentID + ")\t" +
-					(flushStartTime - lastTime) + "\t" +
-					(flushStartTime - lastTime) / documentCount);
+					(flushStartTime - lastTime) + " (" +
+					(flushStartTime - lastTime) / documentCount + ")");
 			postingManager.addTermTree(this);
 			long time = Calendar.getInstance().getTimeInMillis();
-			System.out.println("\t\t\t" +
-					(time - flushStartTime) + "/" + (time - lastTime) + "\t" +
+			FileLogger.log("\t\t\t" +
+					(time - flushStartTime) + "/" + (time - lastTime) + " (" +
 					((time - flushStartTime) / documentCount) + "/" +
-					((time - lastTime) / documentCount));
+					((time - lastTime) / documentCount) + ")");
 			lastTime = time;
 			lastDocumentID = currentDocumentID;
 		}

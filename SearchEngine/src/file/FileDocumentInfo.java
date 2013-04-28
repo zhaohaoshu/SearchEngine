@@ -40,7 +40,7 @@ public class FileDocumentInfo extends DocumentInfo
 	public String toString()
 	{
 		return "{" + getLength() + "," +
-				getPathname() + "[" + getStart() + "," + getLength() + "]}";
+				getPathname() + "[" + getStart() + "," + getEnd() + "]}";
 //		return "{" + getDocumentID() + ":" +
 //				getLength() + "," +
 //				getPathname() + "[" + getStart() + "," + getLength() + "]," +

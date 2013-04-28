@@ -4,7 +4,15 @@ import file.FilePostingReader;
 import java.io.File;
 import java.util.Scanner;
 import file.FileSearchDataManager;
+import file.OffsetReader;
 import http.HTTPServer;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.StringTokenizer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import searchengine.data.Posting;
 import ui.servlet.ServletRequestDeliver;
 
@@ -16,72 +24,35 @@ import ui.servlet.ServletRequestDeliver;
 public class Main
 {
 
+	private static File dictionaryDirFile;
+	private static File documentFile;
+	private static File documentIndexFile;
+	private static File postingFile;
+	private static File postingIndexFile;
+	private static File documentDirFile;
+
 	private static void printUsage()
 	{
 		System.out.println("Usage: searchengine <dictionary_dir> <document_dir> <action>");
 		System.out.println("<action> can be one of the following:");
 		System.out.println("  loaddir <max_posting_count>");
 		System.out.println("  httpserver <server_dir> <port>");
-		System.out.println("  test");
+		System.out.println("  cmdline");
 //		System.out.println("  inputfile <input_file>");
-//		System.out.println("  cmdline");
 	}
 
-	public static void main(String[] args)
+	private static void excute(LinkedList<String> argList)
 	{
-//		Scanner testScanner = new Scanner(System.in);
-//		switch (testScanner.nextLine())
-//		{
-//			case "r":
-//				args = new String[]
-//				{
-//					"E:\\File\\School\\p\\2\\网络信息体系结构\\resource\\gov\\dictionary",
-//					"E:\\File\\School\\p\\2\\网络信息体系结构\\resource\\gov\\part",
-//					"loaddir",
-//					"1000",
-//				};
-//				break;
-//			case "t":
-//				args = new String[]
-//				{
-//					"E:\\File\\School\\p\\2\\网络信息体系结构\\resource\\gov\\dictionary",
-//					"E:\\File\\School\\p\\2\\网络信息体系结构\\resource\\gov\\part",
-//					"test",
-//				};
-//				break;
-//			default:
-//				args = new String[]
-//				{
-//					"E:\\File\\School\\p\\2\\网络信息体系结构\\resource\\gov\\dictionary",
-//					"E:\\File\\School\\p\\2\\网络信息体系结构\\resource\\gov\\part",
-//					"httpserver",
-//					"E:\\File\\Program\\SearchEngine\\httpserver",
-//					"8888"
-//				};
-//				break;
-//		}
-		int argIndex = 0;
-		if (argIndex + 2 > args.length)
-		{
-			printUsage();
-			return;
-		}
-		File dictionaryDirFile = new File(args[argIndex++]);
-		File documentFile = new File(dictionaryDirFile, "document");
-		File documentIndexFile = new File(dictionaryDirFile, "document_index");
-		File postingFile = new File(dictionaryDirFile, "posting");
-		File postingIndexFile = new File(dictionaryDirFile, "posting_index");
-		File documentDirFile = new File(args[argIndex++]);
-		switch (args[argIndex++])
+		switch (argList.poll())
 		{
 			case "loaddir":
 			{
-				if (argIndex + 1 > args.length)
+				if (argList.size() < 1)
 				{
 					printUsage();
 					return;
 				}
-				long maxPostingCount = Long.parseLong(args[argIndex++]);
+				long maxPostingCount = Long.parseLong(argList.poll());
 				try (FileSearchDataManager manager = new FileSearchDataManager(documentDirFile,
 						documentFile, documentIndexFile, postingFile, postingIndexFile, "rw"))
 				{
@@ -90,20 +61,18 @@ public class Main
 					System.out.println("Loaded " + documentCount + " documents");
 					Scanner scanner = new Scanner(System.in);
 					scanner.nextLine();
-//					for (int i = 1; i <= documentCount; i++)
-//						System.out.println(manager.getDocumentInfo(i));
 				}
 			}
 			break;
 			case "httpserver":
 			{
-				if (argIndex + 2 > args.length)
+				if (argList.size() < 2)
 				{
 					printUsage();
 					return;
 				}
-				File serverDirFile = new File(args[argIndex++]);
-				int port = Integer.parseInt(args[argIndex++]);
+				File serverDirFile = new File(argList.poll());
+				int port = Integer.parseInt(argList.poll());
 				try (FileSearchDataManager manager = new FileSearchDataManager(documentDirFile,
 						documentFile, documentIndexFile, postingFile, postingIndexFile, "r"))
 				{
@@ -115,13 +84,15 @@ public class Main
 				}
 			}
 			break;
-			case "test":
+			case "posting":
+			{
 				try (FileSearchDataManager manager = new FileSearchDataManager(documentDirFile,
 						documentFile, documentIndexFile, postingFile, postingIndexFile, "r"))
 				{
 					Scanner scanner = new Scanner(System.in);
 					for (;;)
 					{
+						System.out.print("posting>");
 						String nextLine = scanner.nextLine();
 						if (nextLine.isEmpty())
 							break;
@@ -135,25 +106,103 @@ public class Main
 							System.out.println("\t\t" + posting);
 							reader.moveNext();
 						}
+						System.out.println("\tcount: " + reader.getCount());
 					}
 				}
-				break;
-//			case "inputfile":
-//			{
-//				if (args.length < 3)
-//				{
-//					printUsage();
-//					return;
-//				}
-//				File inputFile = new File(args[2]);
-//			}
-//			break;
-//			case "cmdline":
-//			{
-//			}
-//			break;
+			}
+			break;
+			case "doc":
+			{
+				try (FileSearchDataManager manager = new FileSearchDataManager(documentDirFile,
+						documentFile, documentIndexFile, postingFile, postingIndexFile, "r"))
+				{
+					Scanner scanner = new Scanner(System.in);
+					for (;;)
+					{
+						System.out.print("doc>");
+						String nextLine = scanner.nextLine();
+						if (nextLine.isEmpty())
+							break;
+						System.out.println(manager.getDocumentInfo(Long.parseLong(nextLine)));
+					}
+				}
+			}
+			break;
+			case "cmdline":
+			{
+				Scanner scanner = new Scanner(System.in);
+				for (;;)
+				{
+					System.out.print("cmdline>");
+					String nextLine = scanner.nextLine();
+					if (nextLine.isEmpty())
+						break;
+					LinkedList<String> cmdList = new LinkedList<>();
+					StringTokenizer tokenizer = new StringTokenizer(nextLine);
+					while (tokenizer.hasMoreTokens())
+						cmdList.add(tokenizer.nextToken());
+					excute(cmdList);
+				}
+			}
+			break;
+			case "clear":
+			{
+				documentFile.delete();
+				documentIndexFile.delete();
+				postingFile.delete();
+				postingIndexFile.delete();
+				System.out.println("Dictionary cleared");
+			}
+			break;
+			case "c":
+			{
+				testCode();
+			}
+			break;
 			default:
 				printUsage();
 		}
+	}
+
+	private static void testCode()
+	{
+		try
+		{
+			OffsetReader reader = new OffsetReader(new File(documentDirFile, "../index_00000.txt"));
+			int read;
+			long len = 0;
+			while ((read = reader.read()) >= 0)
+			{
+				len++;
+				if (len == 7058)
+					len = 7058;
+			}
+			System.out.println("len: " + len);
+		}
+		catch (FileNotFoundException ex)
+		{
+			Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+		}
+		catch (IOException ex)
+		{
+			Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+		}
+	}
+
+	public static void main(String[] args)
+	{
+		LinkedList<String> argList = new LinkedList<>(Arrays.asList(args));
+		if (argList.size() < 3)
+		{
+			printUsage();
+			return;
+		}
+		dictionaryDirFile = new File(argList.poll());
+		documentFile = new File(dictionaryDirFile, "document");
+		documentIndexFile = new File(dictionaryDirFile, "document_index");
+		postingFile = new File(dictionaryDirFile, "posting");
+		postingIndexFile = new File(dictionaryDirFile, "posting_index");
+		documentDirFile = new File(argList.poll());
+		excute(argList);
 	}
 }

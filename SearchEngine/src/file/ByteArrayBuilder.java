@@ -24,36 +24,34 @@ public class ByteArrayBuilder
 		bytes[length++] = b;
 	}
 
-	public byte[] getBytes()
-	{
-		return Arrays.copyOf(bytes, length);
-	}
-
 	public int length()
 	{
 		return length;
 	}
 
-	public boolean startsWith(String str)
+	public boolean equalsString(String str)
 	{
-		for (int i = 0; i < str.length(); i++)
+		if (str.length() != length)
+			return false;
+		for (int i = 0; i < length; i++)
 			if (str.charAt(i) != bytes[i])
 				return false;
 		return true;
 	}
 
-	public byte[] subBytes(int start, int end)
-	{
-		return Arrays.copyOfRange(bytes, start, end);
-	}
-
-	public String subString(int start, int end)
-	{
-		return new String(bytes, start, end - start);
-	}
-
 	public void clear()
 	{
 		length = 0;
+	}
+
+	public boolean isEmpty()
+	{
+		return length == 0;
+	}
+
+	@Override
+	public String toString()
+	{
+		return new String(bytes, 0, length);
 	}
 }

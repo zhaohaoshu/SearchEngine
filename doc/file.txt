@@ -11,7 +11,7 @@ DocumentIndex:
 	[2] offset=523
 	...
 
-Term:
+Posting:
 	PostingNode:
 		nextPointer
 		documentID
@@ -21,7 +21,7 @@ Term:
 		...
 		[30] nextPointer=-1 documentID=412 positionCount=62 positionPointer=5
 
-TermIndex:
+PostingIndex:
 	IndexNode:
 		termPointer
 		postingCount
