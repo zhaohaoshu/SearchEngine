@@ -19,57 +19,47 @@ import searchengine.data.SearchDataManager;
  *
  * @author ZHS
  */
-public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, FilePostingReader> implements Closeable
-{
+public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, FilePostingReader> implements Closeable {
 
 	private DocumentManager documentManager;
 	private PostingManager postingManager;
 	private File documentDirFile;
 
-	public FileSearchDataManager(File documentDirFile,
-			File documentFile, File documentIndexFile,
-			File postingFile, File postingIndexFile,
-			String mode)
-	{
-		try
-		{
+	public FileSearchDataManager(File documentDirFile, File dictionaryDirFile, String mode) {
+		try {
 			this.documentDirFile = documentDirFile;
-			documentManager = new DocumentManager(documentFile, documentIndexFile, mode);
-			postingManager = new PostingManager(postingFile, postingIndexFile, mode);
+			documentManager = new DocumentManager(new File(dictionaryDirFile, "document"),
+					new File(dictionaryDirFile, "document_index"), mode);
+			postingManager = new PostingManager(new File(dictionaryDirFile, "posting"),
+					new File(dictionaryDirFile, "posting_index"), mode);
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(FileSearchDataManager.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
 	//<editor-fold defaultstate="collapsed" desc="Add Document">
 
-	public void loadDocument(File file, long maxPostingCount)
-	{
-		PostingTree postingTree = new PostingTree(postingManager, maxPostingCount);
-		loadDocument(file, postingTree);
-		postingTree.flush();
+	public void loadDocuments(File file, int maxPostingCount) throws IOException {
+		postingManager.setMaxPostingCount(maxPostingCount);
+		loadDocument(file);
+		postingManager.flush();
+		documentManager.flush();
 	}
 
-	private void loadDocument(File file, PostingTree postingTree)
-	{
-		if (file.isDirectory())
-		{
+	private void loadDocument(File file) {
+		if (file.isDirectory()) {
 			FileLogger.log("Read directory " + file);
 			for (File childFile : file.listFiles())
-				loadDocument(childFile, postingTree);
+				loadDocument(childFile);
 		}
-		else
-		{
+		else {
 			FileLogger.log("\tRead file " + file);
-			readParadiseFile(file, postingTree);
+			readParadiseFile(file);
 		}
 	}
 
-	public void readParadiseFile(File file, PostingTree postingTree)
-	{
-		try (OffsetReader reader = new OffsetReader(file);)
-		{
+	public void readParadiseFile(File file) {
+		try (OffsetReader reader = new OffsetReader(file);) {
 			ByteArrayBuilder builder = new ByteArrayBuilder();
 			Map<String, Integer> map = null;
 			String title = null;
@@ -77,8 +67,7 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 			long bodyStart = -1;
 			long bodyEnd = -1;
 			String url = null;
-			for (;;)
-			{
+			for (;;) {
 				int read;
 				while ((read = reader.read()) >= 0 &&
 						read != '=' && read != 31)
@@ -87,13 +76,12 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 					break;
 				if (read == 31)//end of a document
 				{
-					addDocument(postingTree, map, title, pathname, bodyStart, bodyEnd, url);
+					addDocument(map, title, pathname, bodyStart, bodyEnd, url);
 					reader.read();//read the '\n'
 				}
 				else //if (reader.getCurrentRead() == '=')
 				{
-					if (builder.equalsString("body"))
-					{
+					if (builder.equalsString("body")) {
 						builder.clear();
 						map = new TreeMap<>();
 						bodyStart = reader.getOffset();
@@ -114,15 +102,13 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 							}
 						bodyEnd = reader.getOffset();
 					}
-					else if (builder.equalsString("title"))
-					{
+					else if (builder.equalsString("title")) {
 						builder.clear();
 						while ((read = reader.read()) != 30)
 							builder.append((byte) read);
 						title = builder.toString();
 					}
-					else if (builder.equalsString("url"))
-					{
+					else if (builder.equalsString("url")) {
 						builder.clear();
 						while ((read = reader.read()) != 30)
 							builder.append((byte) read);
@@ -135,43 +121,34 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 				}
 			}
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(FileSearchDataManager.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
 
-	public boolean addDocument(PostingTree postingTree, Map<String, Integer> map, String name, String pathname, long start, long end, String url)
-	{
+	public boolean addDocument(Map<String, Integer> map, String name, String pathname, long start, long end, String url) {
 		double length = DocumentAnalyser.calcDocumentLength(map);
-		try
-		{
+		try {
 			long documentID = documentManager.addNewDocument(name, length, pathname, start, end, url);
 //			System.out.println("    Add\t" + documentID + "\t" + pathname);
-			for (Map.Entry<String, Integer> entry : map.entrySet())
-				postingTree.addPosting(entry.getKey(), documentID, entry.getValue());
-//			termManager.addPosting(entry.getKey(), documentID, entry.getValue());
+			postingManager.addToBuffer(documentID, map);
 			return true;
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(FileSearchDataManager.class.getName()).log(Level.SEVERE, null, ex);
 		}
 		return false;
 	}
 	//</editor-fold>
 
-	public InputStream getDocumentInputStream(FileDocumentInfo info)
-	{
-		try (FileInputStream fileInputStream = new FileInputStream(new File(documentDirFile, info.getPathname()));)
-		{
+	public InputStream getDocumentInputStream(FileDocumentInfo info) {
+		try (FileInputStream fileInputStream = new FileInputStream(new File(documentDirFile, info.getPathname()));) {
 			fileInputStream.skip(info.getStart());
 			byte[] bytes = new byte[(int) (info.getEnd() - info.getStart())];
 			fileInputStream.read(bytes);
 			return new ByteArrayInputStream(bytes);
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(FileSearchDataManager.class.getName()).log(Level.SEVERE, null, ex);
 		}
 		return null;
@@ -179,78 +156,57 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 	//<editor-fold defaultstate="collapsed" desc="For Search">
 
 	@Override
-	public long getDocumentCount()
-	{
-		try
-		{
+	public long getDocumentCount() {
+		try {
 			return documentManager.getDocumentCount();
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(FileSearchDataManager.class.getName()).log(Level.SEVERE, null, ex);
 		}
 		return 0;
 	}
 
 	@Override
-	public FileDocumentInfo getDocumentInfo(long documentID)
-	{
-		try
-		{
+	public FileDocumentInfo getDocumentInfo(long documentID) {
+		try {
 			return documentManager.getDocumentInfo(documentID);
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(FileSearchDataManager.class.getName()).log(Level.SEVERE, null, ex);
 		}
 		return null;
 	}
 
 	@Override
-	public double getDocumentLength(long documentID)
-	{
-		try
-		{
+	public double getDocumentLength(long documentID) {
+		try {
 			return documentManager.getDocumentLength(documentID);
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(FileSearchDataManager.class.getName()).log(Level.SEVERE, null, ex);
 		}
 		return 0;
 	}
 
 	@Override
-	public String getDocumentName(long documentID)
-	{
-		try
-		{
-			return documentManager.getDocumentName(documentID);
+	public FilePostingReader getPostingReader(String term) {
+		try {
+			return new FilePostingReader(postingManager.getTermPointer(term));
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(FileSearchDataManager.class.getName()).log(Level.SEVERE, null, ex);
 		}
 		return null;
-	}
-
-	@Override
-	public FilePostingReader getPostingReader(String term)
-	{
-		return new FilePostingReader(term, postingManager);
 	}
 	//</editor-fold>
 
 	@Override
-	public void close()
-	{
-		try
-		{
+	public void close() {
+		try {
 			documentManager.close();
 			postingManager.close();
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(FileSearchDataManager.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}

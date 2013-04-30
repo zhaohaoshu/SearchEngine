@@ -1,4 +1,10 @@
 Document:
+	length(double)
+	name(string)
+	pathname(string)
+	start(long)
+	end(long)
+	url(string)
 	[1] length=1.1 name=aaa.txt pathname=input/aaa.txt
 	[2] bcd.txt
 	[3] a.html
@@ -6,6 +12,9 @@ Document:
 	...
 
 DocumentIndex:
+	documentCount(long)
+		offset(long)
+		len(short)
 	count=11016
 	[1] offset=123
 	[2] offset=523

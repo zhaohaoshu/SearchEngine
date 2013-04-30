@@ -7,23 +7,20 @@ import html.HTMLElement;
  *
  * @author ZHS
  */
-public class HTMLPage extends HTMLElement
-{
+public class HTMLPage extends HTMLElement {
 
 	private HTMLElement headElement;
 	private HTMLElement titleElement;
 	private HTMLElement bodyElement;
 
-	public HTMLPage(String title)
-	{
+	public HTMLPage(String title) {
 		super("html");
 		headElement = addChild(new HTMLElement("head"));
 		titleElement = headElement.addChild(new HTMLElement("title", title));
 		bodyElement = addChild(new HTMLElement("body"));
 	}
 
-	public HTMLPage(String title, String css)
-	{
+	public HTMLPage(String title, String css) {
 		super("html");
 		headElement = addChild(new HTMLElement("head"));
 		titleElement = headElement.addChild(new HTMLElement("title", title));
@@ -34,13 +31,11 @@ public class HTMLPage extends HTMLElement
 		bodyElement = addChild(new HTMLElement("body"));
 	}
 
-	public HTMLElement getBodyElement()
-	{
+	public HTMLElement getBodyElement() {
 		return bodyElement;
 	}
 
-	public void write(PrintWriter writer)
-	{
+	public void write(PrintWriter writer) {
 		writer.println("<!DOCTYPE html>");
 		writer.println(this);
 	}

@@ -11,30 +11,26 @@ import java.util.Map;
  *
  * @author ZHS
  */
-public class HTMLElement
-{
+public class HTMLElement {
 
 	private String tag;
 	private Map<String, String> attributes;
 	private List<HTMLElement> children;
 
-	public HTMLElement(String tag)
-	{
+	public HTMLElement(String tag) {
 		this.tag = tag;
 		attributes = new HashMap<>();
 		children = new LinkedList<>();
 	}
 
-	public HTMLElement(String tag, String content)
-	{
+	public HTMLElement(String tag, String content) {
 		this.tag = tag;
 		attributes = new HashMap<>();
 		children = new LinkedList<>();
 		children.add(new StringElement(content));
 	}
 
-	public HTMLElement(String tag, Object[][] atts)
-	{
+	public HTMLElement(String tag, Object[][] atts) {
 		this.tag = tag;
 		attributes = new HashMap<>();
 		for (Object[] att : atts)
@@ -42,49 +38,41 @@ public class HTMLElement
 		children = new LinkedList<>();
 	}
 
-	public String getTag()
-	{
+	public String getTag() {
 		return tag;
 	}
 
-	public void setAttribute(String name, Object value)
-	{
+	public void setAttribute(String name, Object value) {
 		attributes.put(name, value.toString());
 	}
 
-	public StringElement addChild(String string)
-	{
+	public StringElement addChild(String string) {
 		StringElement child = new StringElement(string);
 		return addChild(child);
 	}
 
-	public <T extends HTMLElement> T addChild(T child)
-	{
+	public <T extends HTMLElement> T addChild(T child) {
 		children.add(child);
 		return child;
 	}
 
-	protected void printTabs(PrintWriter printWriter, int count)
-	{
+	protected void printTabs(PrintWriter printWriter, int count) {
 		for (int i = 0; i < count; i++)
 			printWriter.print('\t');
 	}
 
-	public void print(PrintWriter printWriter, int level, boolean format)
-	{
+	public void print(PrintWriter printWriter, int level, boolean format) {
 		if (format)
 			printTabs(printWriter, level);
 		printWriter.print('<' + tag);
 		for (Map.Entry<String, String> entry : attributes.entrySet())
 			printWriter.print(' ' + entry.getKey() + "=\"" + entry.getValue() + '\"');
-		if (children.isEmpty())
-		{
+		if (children.isEmpty()) {
 			printWriter.print("/>");
 			if (format)
 				printWriter.println();
 		}
-		else
-		{
+		else {
 			printWriter.print('>');
 			if (format)
 				printWriter.println();
@@ -99,8 +87,7 @@ public class HTMLElement
 	}
 
 	@Override
-	public String toString()
-	{
+	public String toString() {
 		StringWriter stringWriter = new StringWriter();
 		PrintWriter printWriter = new PrintWriter(stringWriter);
 		print(printWriter, 0, false);

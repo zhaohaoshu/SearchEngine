@@ -13,8 +13,7 @@ import searchengine.data.SearchDataManager;
  *
  * @author ZHS
  */
-public class VectorSearch
-{
+public class VectorSearch {
 
 	/**
 	 * Tokenize the query
@@ -22,13 +21,11 @@ public class VectorSearch
 	 * @param queryString
 	 * @return
 	 */
-	private static Map<String, Integer> tokenizeEntry(String queryString)
-	{
+	private static Map<String, Integer> tokenizeEntry(String queryString) {
 		TypeTokenizer tokenizer = new TypeTokenizer(queryString);
 		List<String> tokens = tokenizer.getStrings(1);
 		HashMap<String, Integer> entries = new HashMap<>();
-		for (String token : tokens)
-		{
+		for (String token : tokens) {
 			Integer get = entries.get(token);
 			if (get == null)
 				entries.put(token, 1);
@@ -40,11 +37,9 @@ public class VectorSearch
 
 	private static void countQuery(
 			Map<String, Integer> entries, SearchDataManager manager,
-			ArrayList<PostingReader> readers, int[] queryCount)
-	{
+			ArrayList<PostingReader> readers, int[] queryCount) {
 		int i = 0;
-		for (Map.Entry<String, Integer> entry : entries.entrySet())
-		{
+		for (Map.Entry<String, Integer> entry : entries.entrySet()) {
 			readers.add(manager.getPostingReader(entry.getKey().toLowerCase()));
 			queryCount[i] = entry.getValue();
 			i++;
@@ -53,8 +48,7 @@ public class VectorSearch
 
 	public static void vectorSearch(
 			String queryString, SearchDataManager manager,
-			VectorSearchResultWriter writer)
-	{
+			VectorSearchResultWriter writer) {
 		Map<String, Integer> entries = tokenizeEntry(queryString);
 		int entryCount = entries.size();
 
@@ -66,11 +60,9 @@ public class VectorSearch
 		long documentCount = manager.getDocumentCount();
 		double[] queryProduct = new double[entryCount];
 		double querySquarSum = 0;
-		for (int i = 0; i < entryCount; i++)
-		{
+		for (int i = 0; i < entryCount; i++) {
 			long count = readers.get(i).getCount();
-			if (count > 0)
-			{
+			if (count > 0) {
 				queryProduct[i] = (1 + Math.log(queryCount[i])) *
 						Math.log((double) (documentCount + 1) / count);
 				querySquarSum += queryProduct[i] * queryProduct[i];
@@ -84,14 +76,12 @@ public class VectorSearch
 //		System.out.println("------");
 
 		Posting[] postings = new Posting[entryCount];
-		for (int i = 0; i < entryCount; i++)
-		{
+		for (int i = 0; i < entryCount; i++) {
 			postings[i] = readers.get(i).read();
 			readers.get(i).moveNext();
 		}
 
-		for (;;)
-		{
+		for (;;) {
 			//get the first document id
 			long id = Common.getMinID(postings);
 			if (id < 0)
@@ -99,8 +89,7 @@ public class VectorSearch
 			//do the score
 			double score = 0;
 			for (int i = 0; i < entryCount; i++)
-				if (postings[i] != null && postings[i].getDocumentID() == id)
-				{
+				if (postings[i] != null && postings[i].getDocumentID() == id) {
 					double documentProduct = 1 + Math.log(postings[i].getPositionCount());
 					score += queryProduct[i] * documentProduct;
 					postings[i] = readers.get(i).read();
@@ -111,8 +100,7 @@ public class VectorSearch
 		}
 	}
 
-	public static abstract class VectorSearchResultWriter
-	{
+	public static abstract class VectorSearchResultWriter {
 
 		public abstract void write(double score, long documentID);
 	}

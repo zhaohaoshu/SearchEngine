@@ -21,18 +21,12 @@ import ui.servlet.ServletRequestDeliver;
  *
  * @author ZHS
  */
-public class Main
-{
+public class Main {
 
 	private static File dictionaryDirFile;
-	private static File documentFile;
-	private static File documentIndexFile;
-	private static File postingFile;
-	private static File postingIndexFile;
 	private static File documentDirFile;
 
-	private static void printUsage()
-	{
+	private static void printUsage() {
 		System.out.println("Usage: searchengine <dictionary_dir> <document_dir> <action>");
 		System.out.println("<action> can be one of the following:");
 		System.out.println("  loaddir <max_posting_count>");
@@ -41,41 +35,36 @@ public class Main
 //		System.out.println("  inputfile <input_file>");
 	}
 
-	private static void excute(LinkedList<String> argList)
-	{
-		switch (argList.poll())
-		{
-			case "loaddir":
-			{
-				if (argList.size() < 1)
-				{
+	private static void excute(LinkedList<String> argList) {
+		switch (argList.poll()) {
+			case "loaddir": {
+				if (argList.size() < 1) {
 					printUsage();
 					return;
 				}
-				long maxPostingCount = Long.parseLong(argList.poll());
-				try (FileSearchDataManager manager = new FileSearchDataManager(documentDirFile,
-						documentFile, documentIndexFile, postingFile, postingIndexFile, "rw"))
-				{
-					manager.loadDocument(documentDirFile, maxPostingCount);
+				int maxPostingCount = Integer.parseInt(argList.poll());
+				try (FileSearchDataManager manager = new FileSearchDataManager(
+						documentDirFile, dictionaryDirFile, "rw")) {
+					manager.loadDocuments(documentDirFile, maxPostingCount);
 					long documentCount = manager.getDocumentCount();
 					System.out.println("Loaded " + documentCount + " documents");
 					Scanner scanner = new Scanner(System.in);
 					scanner.nextLine();
 				}
+				catch (IOException ex) {
+					Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+				}
 			}
 			break;
-			case "httpserver":
-			{
-				if (argList.size() < 2)
-				{
+			case "httpserver": {
+				if (argList.size() < 2) {
 					printUsage();
 					return;
 				}
 				File serverDirFile = new File(argList.poll());
 				int port = Integer.parseInt(argList.poll());
-				try (FileSearchDataManager manager = new FileSearchDataManager(documentDirFile,
-						documentFile, documentIndexFile, postingFile, postingIndexFile, "r"))
-				{
+				try (FileSearchDataManager manager = new FileSearchDataManager(
+						documentDirFile, dictionaryDirFile, "r")) {
 					HTTPServer server = new HTTPServer(port, new ServletRequestDeliver(serverDirFile, manager));
 					server.start();
 					Scanner scanner = new Scanner(System.in);
@@ -84,22 +73,18 @@ public class Main
 				}
 			}
 			break;
-			case "posting":
-			{
-				try (FileSearchDataManager manager = new FileSearchDataManager(documentDirFile,
-						documentFile, documentIndexFile, postingFile, postingIndexFile, "r"))
-				{
+			case "post": {
+				try (FileSearchDataManager manager = new FileSearchDataManager(
+						documentDirFile, dictionaryDirFile, "r")) {
 					Scanner scanner = new Scanner(System.in);
-					for (;;)
-					{
+					for (;;) {
 						System.out.print("posting>");
 						String nextLine = scanner.nextLine();
 						if (nextLine.isEmpty())
 							break;
 						FilePostingReader reader = manager.getPostingReader(nextLine.toLowerCase());
 						System.out.println("\tcount: " + reader.getCount());
-						for (;;)
-						{
+						for (;;) {
 							Posting posting = reader.read();
 							if (posting == null)
 								break;
@@ -111,14 +96,11 @@ public class Main
 				}
 			}
 			break;
-			case "doc":
-			{
-				try (FileSearchDataManager manager = new FileSearchDataManager(documentDirFile,
-						documentFile, documentIndexFile, postingFile, postingIndexFile, "r"))
-				{
+			case "doc": {
+				try (FileSearchDataManager manager = new FileSearchDataManager(
+						documentDirFile, dictionaryDirFile, "r")) {
 					Scanner scanner = new Scanner(System.in);
-					for (;;)
-					{
+					for (;;) {
 						System.out.print("doc>");
 						String nextLine = scanner.nextLine();
 						if (nextLine.isEmpty())
@@ -128,11 +110,9 @@ public class Main
 				}
 			}
 			break;
-			case "cmdline":
-			{
+			case "cmdline": {
 				Scanner scanner = new Scanner(System.in);
-				for (;;)
-				{
+				for (;;) {
 					System.out.print("cmdline>");
 					String nextLine = scanner.nextLine();
 					if (nextLine.isEmpty())
@@ -145,17 +125,13 @@ public class Main
 				}
 			}
 			break;
-			case "clear":
-			{
-				documentFile.delete();
-				documentIndexFile.delete();
-				postingFile.delete();
-				postingIndexFile.delete();
+			case "clear": {
+				for (File file : dictionaryDirFile.listFiles())
+					file.delete();
 				System.out.println("Dictionary cleared");
 			}
 			break;
-			case "c":
-			{
+			case "c": {
 				testCode();
 			}
 			break;
@@ -164,44 +140,33 @@ public class Main
 		}
 	}
 
-	private static void testCode()
-	{
-		try
-		{
+	private static void testCode() {
+		try {
 			OffsetReader reader = new OffsetReader(new File(documentDirFile, "../index_00000.txt"));
 			int read;
 			long len = 0;
-			while ((read = reader.read()) >= 0)
-			{
+			while ((read = reader.read()) >= 0) {
 				len++;
 				if (len == 7058)
 					len = 7058;
 			}
 			System.out.println("len: " + len);
 		}
-		catch (FileNotFoundException ex)
-		{
+		catch (FileNotFoundException ex) {
 			Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
 
-	public static void main(String[] args)
-	{
+	public static void main(String[] args) {
 		LinkedList<String> argList = new LinkedList<>(Arrays.asList(args));
-		if (argList.size() < 3)
-		{
+		if (argList.size() < 3) {
 			printUsage();
 			return;
 		}
 		dictionaryDirFile = new File(argList.poll());
-		documentFile = new File(dictionaryDirFile, "document");
-		documentIndexFile = new File(dictionaryDirFile, "document_index");
-		postingFile = new File(dictionaryDirFile, "posting");
-		postingIndexFile = new File(dictionaryDirFile, "posting_index");
 		documentDirFile = new File(argList.poll());
 		excute(argList);
 	}

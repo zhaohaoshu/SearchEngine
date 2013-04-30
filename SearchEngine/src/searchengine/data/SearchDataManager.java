@@ -4,8 +4,7 @@ package searchengine.data;
  *
  * @author ZHS
  */
-public abstract class SearchDataManager<D extends DocumentInfo, R extends PostingReader>
-{
+public abstract class SearchDataManager<D extends DocumentInfo, R extends PostingReader> {
 
 	/**
 	 * Gets the number of documents
@@ -25,13 +24,11 @@ public abstract class SearchDataManager<D extends DocumentInfo, R extends Postin
 	 * @param documentID the id of the required document
 	 * @return length of the document
 	 */
-	public double getDocumentLength(long documentID)
-	{
+	public double getDocumentLength(long documentID) {
 		return getDocumentInfo(documentID).getLength();
 	}
 
-	public String getDocumentName(long documentID)
-	{
+	public String getDocumentName(long documentID) {
 		return getDocumentInfo(documentID).getName();
 	}
 }

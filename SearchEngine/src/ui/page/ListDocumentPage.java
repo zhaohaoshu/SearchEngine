@@ -10,16 +10,13 @@ import searchengine.data.DocumentInfo;
  *
  * @author ZHS
  */
-public class ListDocumentPage extends MainFrame
-{
+public class ListDocumentPage extends MainFrame {
 
-	public ListDocumentPage(List<? extends DocumentInfo> infos, boolean appendInfo)
-	{
+	public ListDocumentPage(List<? extends DocumentInfo> infos, boolean appendInfo) {
 		super("Dcouments");
 		HTMLTable table = getContent().addChild(new HTMLTable());
 		table.addRow("<b>Documents: </b>");
-		for (DocumentInfo info : infos)
-		{
+		for (DocumentInfo info : infos) {
 			HTMLTableCell cell = new HTMLTableCell();
 			cell.addChild("[");
 			cell.addChild(new HTMLLink("/show?id=" + info.getDocumentID() + "&download=download", "download"));

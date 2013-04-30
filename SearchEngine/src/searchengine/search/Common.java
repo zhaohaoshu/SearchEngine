@@ -6,11 +6,9 @@ import searchengine.data.Posting;
  *
  * @author ZHS
  */
-public class Common
-{
+public class Common {
 
-	public static long getMinID(Posting[] postings)
-	{
+	public static long getMinID(Posting[] postings) {
 		long id = -1;
 		for (Posting posting : postings)
 			if (posting != null && (id < 0 || posting.getDocumentID() < id))

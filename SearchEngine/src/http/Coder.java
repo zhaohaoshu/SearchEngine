@@ -10,17 +10,13 @@ import java.util.logging.Logger;
  *
  * @author ZHS
  */
-public class Coder
-{
+public class Coder {
 
-	public static String escapeHTML(String string)
-	{
+	public static String escapeHTML(String string) {
 		StringBuilder builder = new StringBuilder();
-		for (int i = 0; i < string.length(); i++)
-		{
+		for (int i = 0; i < string.length(); i++) {
 			char ch = string.charAt(i);
-			switch (ch)
-			{
+			switch (ch) {
 				case ' ':
 					if (i > 0 && string.charAt(i - 1) == ' ')
 						builder.append("&nbsp;");
@@ -56,27 +52,21 @@ public class Coder
 		return builder.toString();
 	}
 
-	public static String encodeURL(String string)
-	{
-		try
-		{
+	public static String encodeURL(String string) {
+		try {
 			return URLEncoder.encode(string, "UTF-8");
 		}
-		catch (UnsupportedEncodingException ex)
-		{
+		catch (UnsupportedEncodingException ex) {
 			Logger.getLogger(Coder.class.getName()).log(Level.SEVERE, null, ex);
 		}
 		return null;
 	}
 
-	public static String decodeURL(String string)
-	{
-		try
-		{
+	public static String decodeURL(String string) {
+		try {
 			return URLDecoder.decode(string, "UTF-8");
 		}
-		catch (UnsupportedEncodingException ex)
-		{
+		catch (UnsupportedEncodingException ex) {
 			Logger.getLogger(Coder.class.getName()).log(Level.SEVERE, null, ex);
 		}
 		return null;

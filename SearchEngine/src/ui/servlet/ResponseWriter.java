@@ -8,13 +8,10 @@ import http.HTTPResponse;
  *
  * @author ZHS
  */
-public class ResponseWriter
-{
+public class ResponseWriter {
 
-	public static void write(HTMLPage page, HTTPResponse response)
-	{
-		try (PrintWriter writer = new PrintWriter(response.getContentStream()))
-		{
+	public static void write(HTMLPage page, HTTPResponse response) {
+		try (PrintWriter writer = new PrintWriter(response.getContentStream())) {
 			page.write(writer);
 		}
 	}

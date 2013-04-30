@@ -1,97 +1,118 @@
 package file.manager;
 
-import file.PostingTree;
+import file.FileLogger;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import searchengine.data.Posting;
 
 /**
  *
  * @author ZHS
  */
-public class PostingManager implements Closeable
-{
+public class PostingManager implements Closeable {
 
+	long lastTime = Calendar.getInstance().getTimeInMillis();
+	long lastDocumentID = 0;
+	long currentDocumentID = 0;
 	private FileChannel indexChannel;
 	private FileChannel postingChannel;
+	private PostingTree postingTree;
+	private int maxPostingCount;
 
-	public PostingManager(File postingFile, File postingIndexFile, String mode) throws IOException
-	{
+	public PostingManager(File postingFile, File postingIndexFile, String mode) throws IOException {
 		indexChannel = new RandomAccessFile(postingIndexFile, mode).getChannel();
-		if (indexChannel.size() == 0)
-			new IndexNode().save();
+		if (indexChannel.size() == 0) {
+			IndexNode indexNode = new IndexNode(0);
+			indexNode.init();
+			indexNode.save();
+		}
 		postingChannel = new RandomAccessFile(postingFile, mode).getChannel();
+		postingTree = new PostingTree();
 	}
 	//<editor-fold defaultstate="collapsed" desc="Add">
 
-	public void addTermTree(PostingTree termTree) throws IOException
-	{
-		PostingTree.Node root = termTree.getRoot();
-		List<IndexNode> appendIndexNodes = new LinkedList<>();
-		addTermTreeNode(root, new IndexNode(0), appendIndexNodes);
-		ByteBuffer byteBuffer = ByteBuffer.allocate(appendIndexNodes.size() * IndexNode.SIZE);
-		for (IndexNode appendIndexNode : appendIndexNodes)
+	public void setMaxPostingCount(int maxPostingCount) {
+		this.maxPostingCount = maxPostingCount;
+	}
+
+	public void addToBuffer(long documentID, Map<String, Integer> map) throws IOException {
+		currentDocumentID = documentID;
+		for (Map.Entry<String, Integer> entry : map.entrySet()) {
+			postingTree.addPosting(entry.getKey(), documentID, entry.getValue());
+			if (postingTree.currentPostingCount > maxPostingCount)
+				flush();
+		}
+	}
+
+	public void flush() throws IOException {
+		long documentCount = currentDocumentID - lastDocumentID;
+		if (documentCount <= 0)
+			documentCount = 1;
+		long flushStartTime = Calendar.getInstance().getTimeInMillis();
+		FileLogger.log("\t\tflushing " +
+				documentCount + "(" +
+				(lastDocumentID + 1) + "~" + currentDocumentID + ")\t" +
+				(flushStartTime - lastTime) + " (" +
+				(flushStartTime - lastTime) / documentCount + ")");
+
+		addPostingTreeNode(postingTree.root);
+		ByteBuffer byteBuffer = ByteBuffer.allocate(postingTree.appendIndexNodes.size() * IndexNode.SIZE);
+		for (IndexNode appendIndexNode : postingTree.appendIndexNodes)
 			byteBuffer.put(appendIndexNode.buffer);
 		indexChannel.position(indexChannel.size());
 		byteBuffer.rewind();
 		while (byteBuffer.hasRemaining())
 			indexChannel.write(byteBuffer);
+		postingTree.clear();
+
+		long time = Calendar.getInstance().getTimeInMillis();
+		FileLogger.log("\t\t\t" +
+				(time - flushStartTime) + "/" + (time - lastTime) + " (" +
+				((time - flushStartTime) / documentCount) + "/" +
+				((time - lastTime) / documentCount) + ")");
+		lastTime = time;
+		lastDocumentID = currentDocumentID;
 	}
 
-	private void addTermTreeNode(PostingTree.Node treeNode, IndexNode indexNode,
-			List<IndexNode> appendIndexNodes) throws IOException
-	{
-		boolean modified = false;
-		LinkedList<Posting> postings = treeNode.getPostings();
-		if (!postings.isEmpty())
-		{
-			modified = true;
+	private void addPostingTreeNode(PostingTree.TreeNode treeNode) throws IOException {
+		LinkedList<Posting> postings = treeNode.postings;
+		IndexNode indexNode = treeNode.indexNode;
+		if (!postings.isEmpty()) {
+			treeNode.isModified = true;
 			if (indexNode.readFirstPostingPointer() < 0)
 				indexNode.writeFirstPostingPointer(postingChannel.size());
-			else
-				indexNode.getTailPostingNode().writeNextPointer(postingChannel.size());
+			else {
+				PostingNode tailPostingNode = indexNode.getTailPostingNode();
+				tailPostingNode.writeNextPointer(postingChannel.size());
+				tailPostingNode.save();
+			}
 			indexNode.writePostingCount(indexNode.readPostingCount() + postings.size());
 			indexNode.writeTailPostingPointer(postingChannel.size() + PostingNode.SIZE * (postings.size() - 1));
 			appendPostings(postings);
 		}
-		PostingTree.Node[] children = treeNode.getChildren();
-		for (int i = 0; i < children.length; i++)
-			if (children[i] != null)
-			{
-				modified = true;
-				long childPointer = indexNode.readChildPointer(i);
-				IndexNode childNode;
-				if (childPointer < 0)
-				{
-					childNode = new IndexNode(appendIndexNodes);
-					appendIndexNodes.add(childNode);
-					indexNode.writeChildPointer(i, childNode.base);
-				}
-				else
-					childNode = new IndexNode(childPointer);
-				addTermTreeNode(children[i], childNode, appendIndexNodes);
-			}
-		if (modified && !indexNode.isAppend)
+		for (PostingTree.TreeNode child : treeNode.children)
+			if (child != null)
+				addPostingTreeNode(child);
+		if (!treeNode.isAppend && treeNode.isModified)
 			indexNode.save();
 	}
 
-	private void appendPostings(LinkedList<Posting> postings) throws IOException
-	{
+	private void appendPostings(LinkedList<Posting> postings) throws IOException {
 		ByteBuffer buffer = ByteBuffer.allocate(postings.size() * PostingNode.SIZE);
 		long filePointer = postingChannel.size();
 		postingChannel.position(filePointer);
 		int i = 0;
-		for (Posting posting : postings)
-		{
+		for (Posting posting : postings) {
 			//nextPointer
-			if (i < postings.size() - 1)
-			{
+			if (i < postings.size() - 1) {
 				//8 nextPointer, 8 documentID, 4 positionCount
 				filePointer += PostingNode.SIZE;
 				buffer.putLong(filePointer);
@@ -110,34 +131,22 @@ public class PostingManager implements Closeable
 	//</editor-fold>
 	//<editor-fold defaultstate="collapsed" desc="Get">
 
-	public PostingPointer getTermPointer(String term) throws IOException
-	{
+	public PostingPointer getTermPointer(String term) throws IOException {
 		IndexNode indexNode = new IndexNode(0);
+		indexNode.load();
 		for (int i = 0; i < term.length() && indexNode != null; i++)
-			indexNode = indexNode.getChildNode(term.charAt(i) - 'a', false);
+			indexNode = indexNode.getChildNode(term.charAt(i) - 'a');
 		if (indexNode == null)
 			return new PostingPointer(null, 0);
 		return new PostingPointer(indexNode.getFirstPostingNode(), indexNode.readPostingCount());
 	}
-	//</editor-fold>
 
-	@Override
-	public void close() throws IOException
-	{
-		indexChannel.force(false);
-		indexChannel.close();
-		postingChannel.force(false);
-		postingChannel.close();
-	}
-
-	public class PostingPointer
-	{
+	public class PostingPointer {
 
 		private PostingNode postingNode;
 		private long postingCount;
 
-		private PostingPointer(PostingNode termNode, long postingCount)
-		{
+		private PostingPointer(PostingNode termNode, long postingCount) {
 			this.postingNode = termNode;
 			this.postingCount = postingCount;
 		}
@@ -147,8 +156,7 @@ public class PostingManager implements Closeable
 		 *
 		 * @return
 		 */
-		public long getPostingCount()
-		{
+		public long getPostingCount() {
 			return postingCount;
 		}
 
@@ -157,13 +165,13 @@ public class PostingManager implements Closeable
 		 *
 		 * @throws IOException
 		 */
-		public void moveNext() throws IOException
-		{
-			postingNode = postingNode.getNext();
+		public void moveNext() throws IOException {
+			PostingNode node = postingNode;
+			postingNode = null;
+			postingNode = node.getNext();
 		}
 
-		public Posting getPosting() throws IOException
-		{
+		public Posting getPosting() throws IOException {
 			return postingNode.getPosting();
 		}
 
@@ -172,45 +180,51 @@ public class PostingManager implements Closeable
 		 *
 		 * @return
 		 */
-		public boolean isEnd()
-		{
+		public boolean isEnd() {
 			return postingNode == null;
 		}
 	}
+	//</editor-fold>
 
-	private class Node
-	{
+	@Override
+	public void close() throws IOException {
+		indexChannel.force(false);
+		indexChannel.close();
+		postingChannel.force(false);
+		postingChannel.close();
+	}
+	//<editor-fold defaultstate="collapsed" desc="Node">
+
+	private class Node {
 
 		long base;
 		ByteBuffer buffer;
 		FileChannel channel;
 
-		Node(FileChannel channel, long base, int size) throws IOException
-		{
+		Node(FileChannel channel, long base, int size) throws IOException {
 			this.channel = channel;
 			this.base = base;
 			buffer = ByteBuffer.allocate(size);
 		}
 
-		void load() throws IOException
-		{
+		void load() throws IOException {
 			buffer.rewind();
 			channel.position(base);
 			while (buffer.hasRemaining())
 				channel.read(buffer);
 		}
 
-		void save() throws IOException
-		{
+		void save() throws IOException {
 			buffer.rewind();
 			channel.position(base);
 			while (buffer.hasRemaining())
 				channel.write(buffer);
 		}
 	}
+	//</editor-fold>
+	//<editor-fold defaultstate="collapsed" desc="Index Node">
 
-	private class IndexNode extends Node
-	{
+	private class IndexNode extends Node {
 
 		//termPointer
 		//postingCount
@@ -220,39 +234,12 @@ public class PostingManager implements Closeable
 		 * Number of bytes
 		 */
 		static final int SIZE = 29 * 8;
-		boolean isAppend;
 
-		public IndexNode(long base) throws IOException
-		{
+		public IndexNode(long base) throws IOException {
 			super(indexChannel, base, SIZE);
-			load();
 		}
 
-		/**
-		 * Append a new index node
-		 *
-		 * @throws IOException
-		 */
-		public IndexNode(List<IndexNode> appendIndexNodes) throws IOException
-		{
-			super(indexChannel, indexChannel.size() + appendIndexNodes.size() * SIZE, SIZE);
-			init();
-			isAppend = true;
-		}
-
-		/**
-		 * Create a new index node at offset 0
-		 *
-		 * @throws IOException
-		 */
-		public IndexNode() throws IOException
-		{
-			super(indexChannel, 0, SIZE);
-			init();
-		}
-
-		private void init() throws IOException
-		{
+		void init() throws IOException {
 			writeFirstPostingPointer(-1);
 			writePostingCount(0);
 			writeTailPostingPointer(-1);
@@ -260,115 +247,168 @@ public class PostingManager implements Closeable
 				writeChildPointer(i, -1);
 		}
 
-		long readFirstPostingPointer()
-		{
+		long readFirstPostingPointer() {
 			return buffer.getLong(0);
 		}
 
-		PostingNode getFirstPostingNode() throws IOException
-		{
+		PostingNode getFirstPostingNode() throws IOException {
 			long firstPostingPointer = readFirstPostingPointer();
 			if (firstPostingPointer < 0)
 				return null;
 			return new PostingNode(firstPostingPointer);
 		}
 
-		void writeFirstPostingPointer(long value) throws IOException
-		{
+		void writeFirstPostingPointer(long value) throws IOException {
 			buffer.putLong(0, value);
 		}
 
-		long readPostingCount() throws IOException
-		{
+		long readPostingCount() throws IOException {
 			return buffer.getLong(8);
 		}
 
-		void writePostingCount(long value) throws IOException
-		{
+		void writePostingCount(long value) throws IOException {
 			buffer.putLong(8, value);
 		}
 
-		long readTailPostingPointer()
-		{
+		long readTailPostingPointer() {
 			return buffer.getLong(16);
 		}
 
-		PostingNode getTailPostingNode() throws IOException
-		{
+		PostingNode getTailPostingNode() throws IOException {
 			long tailPointer = readTailPostingPointer();
-			if (tailPointer < 0)
-				return null;
 			return new PostingNode(tailPointer);
 		}
 
-		void writeTailPostingPointer(long value)
-		{
+		void writeTailPostingPointer(long value) {
 			buffer.putLong(16, value);
 		}
 
-		long readChildPointer(int i) throws IOException
-		{
+		long readChildPointer(int i) throws IOException {
+			if (i < 0 || i >= 26)
+				return -1;
 			return buffer.getLong((i + 3) * 8);
 		}
 
-		void writeChildPointer(int i, long value) throws IOException
-		{
+		void writeChildPointer(int i, long value) throws IOException {
 			buffer.putLong((i + 3) * 8, value);
 		}
 
-		IndexNode getChildNode(int i, boolean add) throws IOException
-		{
+		IndexNode getChildNode(int i) throws IOException {
 			long childPointer = readChildPointer(i);
 			if (childPointer < 0)
-			{
-				if (!add)
-					return null;
-				IndexNode indexNode = new IndexNode();
-				writeChildPointer(i, indexNode.base);
-				return indexNode;
-			}
-			return new IndexNode(childPointer);
+				return null;
+			IndexNode indexNode = new IndexNode(childPointer);
+			indexNode.load();
+			return indexNode;
 		}
 	}
+	//</editor-fold>
+	//<editor-fold defaultstate="collapsed" desc="Posting Node">
 
-	private class PostingNode extends Node
-	{
+	private class PostingNode extends Node {
 
 		//nextPointer
 		//documentID
 		//positionCount(int)
 		static final int SIZE = 20;
 
-		public PostingNode(long base) throws IOException
-		{
+		public PostingNode(long base) throws IOException {
 			super(postingChannel, base, SIZE);
 			load();
 		}
 
-		Posting getPosting() throws IOException
-		{
+		Posting getPosting() throws IOException {
 			buffer.position(8);
 			long documentID = buffer.getLong();
 			int positionCount = buffer.getInt();
 			return new Posting(documentID, positionCount);
 		}
 
-		long readNextPointer() throws IOException
-		{
+		long readNextPointer() throws IOException {
 			return buffer.getLong(0);
 		}
 
-		void writeNextPointer(long value) throws IOException
-		{
+		void writeNextPointer(long value) throws IOException {
 			buffer.putLong(0, value);
 		}
 
-		PostingNode getNext() throws IOException
-		{
+		PostingNode getNext() throws IOException {
 			long nextPointer = readNextPointer();
 			if (nextPointer < 0)
 				return null;
 			return new PostingNode(nextPointer);
 		}
 	}
+	//</editor-fold>
+	//<editor-fold defaultstate="collapsed" desc="Buffer">
+
+	private class PostingTree {
+
+		TreeNode root;
+		long currentPostingCount;
+		List<IndexNode> appendIndexNodes;
+		long appendOffset;
+
+		PostingTree() throws IOException {
+			root = new TreeNode(0);
+			currentPostingCount = 0;
+			appendIndexNodes = new LinkedList<>();
+			appendOffset = indexChannel.size();
+		}
+
+		void clear() throws IOException {
+			root = new TreeNode(0);
+			currentPostingCount = 0;
+			appendIndexNodes = new LinkedList<>();
+			appendOffset = indexChannel.size();
+		}
+
+		void addPosting(String term, long documentID, int positionCount) throws IOException {
+			currentPostingCount++;
+			TreeNode p = root;
+			for (int strIndex = 0; strIndex < term.length(); strIndex++) {
+				int index = term.charAt(strIndex) - 'a';
+				if (p.children[index] == null) {
+					if (!p.isAppend) {
+						long childPointer = p.indexNode.readChildPointer(index);
+						if (childPointer >= 0)
+							p.children[index] = new TreeNode(childPointer);
+						else
+							p.isModified = true;
+					}
+					if (p.children[index] == null) {
+						TreeNode child = new TreeNode();
+						p.children[index] = child;
+						p.indexNode.writeChildPointer(index, child.indexNode.base);
+					}
+				}
+				p = p.children[index];
+			}
+			p.postings.addLast(new Posting(documentID, positionCount));
+		}
+
+		class TreeNode {
+
+			LinkedList<Posting> postings = new LinkedList<>();
+			TreeNode[] children = new TreeNode[26];
+			boolean isAppend;
+			boolean isModified;
+			IndexNode indexNode;
+
+			TreeNode() throws IOException {
+				isAppend = true;
+				indexNode = new IndexNode(appendOffset + appendIndexNodes.size() * IndexNode.SIZE);
+				indexNode.init();
+				appendIndexNodes.add(indexNode);
+			}
+
+			TreeNode(long base) throws IOException {
+				isAppend = false;
+				isModified = false;
+				indexNode = new IndexNode(base);
+				indexNode.load();
+			}
+		}
+	}
+	//</editor-fold>
 }

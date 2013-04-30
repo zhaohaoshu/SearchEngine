@@ -14,8 +14,7 @@ import java.util.logging.Logger;
  *
  * @author ZHS
  */
-public class TypeTokenizer implements Closeable
-{
+public class TypeTokenizer implements Closeable {
 
 	private StringBuilder buf = new StringBuilder();
 	private int lastType = -1;
@@ -23,49 +22,41 @@ public class TypeTokenizer implements Closeable
 	private List<TreeSet<Character>> types = new LinkedList<>();
 	private InputStream inputStream;
 
-	public TypeTokenizer(InputStream inputStream)
-	{
+	public TypeTokenizer(InputStream inputStream) {
 		this.inputStream = inputStream;
 	}
 
-	public TypeTokenizer(String string)
-	{
+	public TypeTokenizer(String string) {
 		inputStream = new ByteArrayInputStream(string.getBytes());
 	}
 
-	public void addType(String string)
-	{
+	public void addType(String string) {
 		TreeSet<Character> set = new TreeSet<>();
 		for (int i = 0; i < string.length(); i++)
 			set.add(string.charAt(i));
 		types.add(set);
 	}
 
-	public void addTypes(char[] chars)
-	{
-		for (char c : chars)
-		{
+	public void addTypes(char[] chars) {
+		for (char c : chars) {
 			TreeSet<Character> set = new TreeSet<>();
 			set.add(c);
 			types.add(set);
 		}
 	}
 
-	public void addTypes(String[] strings)
-	{
+	public void addTypes(String[] strings) {
 		for (String string : strings)
 			addType(string);
 	}
 
-	private int getType(int ch)
-	{
+	private int getType(int ch) {
 		if (ch < 0)
 			return -1;
 		if (('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z'))
 			return 1;
 		int type = 2;
-		for (TreeSet<Character> set : types)
-		{
+		for (TreeSet<Character> set : types) {
 			if (set.contains((char) ch))
 				return type;
 			type++;
@@ -73,25 +64,20 @@ public class TypeTokenizer implements Closeable
 		return type;
 	}
 
-	private void readNext()
-	{
+	private void readNext() {
 		lastType = -1;
 		buf.delete(0, buf.length());
-		for (;;)
-		{
+		for (;;) {
 			int read = -1;
-			if (lastRead >= 0)
-			{
+			if (lastRead >= 0) {
 				read = lastRead;
 				lastRead = -1;
 			}
 			else
-				try
-				{
+				try {
 					read = inputStream.read();
 				}
-				catch (IOException ex)
-				{
+				catch (IOException ex) {
 					Logger.getLogger(TypeTokenizer.class.getName()).log(Level.SEVERE, null, ex);
 				}
 			if (read < 0)
@@ -99,8 +85,7 @@ public class TypeTokenizer implements Closeable
 			int type = getType(read);
 			if (lastType < 0)
 				lastType = type;
-			if (type != lastType)
-			{
+			if (type != lastType) {
 				lastRead = read;
 				break;
 			}
@@ -108,11 +93,9 @@ public class TypeTokenizer implements Closeable
 		}
 	}
 
-	public List<String> getStrings(int requiredType)
-	{
+	public List<String> getStrings(int requiredType) {
 		List<String> result = new LinkedList<>();
-		for (;;)
-		{
+		for (;;) {
 			String next = getNext(requiredType);
 			if (next == null)
 				break;
@@ -121,41 +104,34 @@ public class TypeTokenizer implements Closeable
 		return result;
 	}
 
-	public String getNext()
-	{
+	public String getNext() {
 		readNext();
 		return getString();
 	}
 
-	public String getNext(int requiredType)
-	{
+	public String getNext(int requiredType) {
 		do
 			readNext();
 		while (!(lastType < 0 || lastType == requiredType));
 		return getString();
 	}
 
-	public int getStringType()
-	{
+	public int getStringType() {
 		return lastType;
 	}
 
-	public String getString()
-	{
+	public String getString() {
 		if (lastType <= 0)
 			return null;
 		return buf.toString();
 	}
 
 	@Override
-	public void close()
-	{
-		try
-		{
+	public void close() {
+		try {
 			inputStream.close();
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(TypeTokenizer.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}

@@ -13,8 +13,7 @@ import java.util.logging.Logger;
  *
  * @author ZHS
  */
-public abstract class HTTPResponse
-{
+public abstract class HTTPResponse {
 
 	public abstract void setStatus(int status);
 
@@ -26,8 +25,7 @@ public abstract class HTTPResponse
 
 	public abstract PrintWriter getContentWriter();
 
-	public void setContentType(String type)
-	{
+	public void setContentType(String type) {
 		setHeader("Content-Type", type);
 	}
 
@@ -36,65 +34,53 @@ public abstract class HTTPResponse
 	 *
 	 * @param url
 	 */
-	public void setRedirect(String url)
-	{
+	public void setRedirect(String url) {
 		setStatus(302);
 		setStatusMessage("Found");
 		setHeader("Location", url);
 	}
 
-	public void serveFile(InputStream inputStream)
-	{
-		try
-		{
+	public void serveFile(InputStream inputStream) {
+		try {
 			byte[] buf = new byte[1024];
-			for (;;)
-			{
+			for (;;) {
 				int len = inputStream.read(buf);
 				if (len < 0)
 					break;
 				getContentStream().write(buf, 0, len);
 			}
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(HTTPResponse.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
 
-	public void serveFile(File file)
-	{
-		try (FileInputStream inputStream = new FileInputStream(file);)
-		{
+	public void serveFile(File file) {
+		try (FileInputStream inputStream = new FileInputStream(file);) {
 			serveFile(inputStream);
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(HTTPResponse.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
 
-	public void serveFile(File file, String fileName)
-	{
+	public void serveFile(File file, String fileName) {
 		setHeader("Content-Disposition", "attachment;filename=\"" + Coder.encodeURL(fileName) + '\"');
 		serveFile(file);
 	}
 
-	public void serveFile(File file, String fileName, String type)
-	{
+	public void serveFile(File file, String fileName, String type) {
 		setHeader("Content-Disposition", "attachment;filename=\"" + Coder.encodeURL(fileName) + '\"');
 		setContentType(type);
 		serveFile(file);
 	}
 
-	public void serveFile(InputStream inputStream, String fileName)
-	{
+	public void serveFile(InputStream inputStream, String fileName) {
 		setHeader("Content-Disposition", "attachment;filename=\"" + Coder.encodeURL(fileName) + '\"');
 		serveFile(inputStream);
 	}
 
-	public void serveFile(InputStream inputStream, String fileName, String type)
-	{
+	public void serveFile(InputStream inputStream, String fileName, String type) {
 		setHeader("Content-Disposition", "attachment;filename=\"" + Coder.encodeURL(fileName) + '\"');
 		setContentType(type);
 		serveFile(inputStream);

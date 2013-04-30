@@ -11,58 +11,40 @@ import searchengine.data.PostingReader;
  *
  * @author ZHS
  */
-public class FilePostingReader extends PostingReader
-{
+public class FilePostingReader extends PostingReader {
 
-	private PostingManager termManager;
 	private PostingManager.PostingPointer postingPointer;
 
-	public FilePostingReader(String term, PostingManager postingManager)
-	{
-		try
-		{
-			this.termManager = postingManager;
-			postingPointer = postingManager.getTermPointer(term);
-		}
-		catch (IOException ex)
-		{
-			Logger.getLogger(FilePostingReader.class.getName()).log(Level.SEVERE, null, ex);
-		}
+	public FilePostingReader(PostingManager.PostingPointer postingPointer) {
+		this.postingPointer = postingPointer;
 	}
 
 	@Override
-	public void moveNext()
-	{
-		try
-		{
+	public void moveNext() {
+		try {
 			if (!postingPointer.isEnd())
 				postingPointer.moveNext();
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(FilePostingReader.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
 
 	@Override
-	public Posting read()
-	{
+	public Posting read() {
 		if (postingPointer.isEnd())
 			return null;
-		try
-		{
+		try {
 			return postingPointer.getPosting();
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(FilePostingReader.class.getName()).log(Level.SEVERE, null, ex);
 		}
 		return null;
 	}
 
 	@Override
-	public long getCount()
-	{
+	public long getCount() {
 		return postingPointer.getPostingCount();
 	}
 }

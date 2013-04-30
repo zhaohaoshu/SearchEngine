@@ -17,18 +17,14 @@ import searchengine.data.DocumentInfo;
  *
  * @author ZHS
  */
-public class ShowDocumentPage extends MainFrame
-{
+public class ShowDocumentPage extends MainFrame {
 
-	private TreeSet<Integer> getPositions(String pos)
-	{
+	private TreeSet<Integer> getPositions(String pos) {
 		TreeSet<Integer> positions = new TreeSet<>();
-		if (pos != null)
-		{
+		if (pos != null) {
 			TypeTokenizer tokenizer = new TypeTokenizer(pos);
 			tokenizer.addType("0123456789");
-			for (;;)
-			{
+			for (;;) {
 				String token = tokenizer.getNext(2);
 				if (token == null)
 					break;
@@ -38,11 +34,9 @@ public class ShowDocumentPage extends MainFrame
 		return positions;
 	}
 
-	private TreeSet<String> getKeyWords(String query)
-	{
+	private TreeSet<String> getKeyWords(String query) {
 		TreeSet<String> keyWords = new TreeSet<>();
-		if (query != null)
-		{
+		if (query != null) {
 			TypeTokenizer tokenizer = new TypeTokenizer(query);
 			for (String string : tokenizer.getStrings(1))
 				keyWords.add(string.toLowerCase());
@@ -51,8 +45,7 @@ public class ShowDocumentPage extends MainFrame
 	}
 
 	public ShowDocumentPage(DocumentInfo info, InputStream inputStream,
-			String pos, String query)
-	{
+			String pos, String query) {
 		super("Document - " + info.getName());
 		TreeSet<Integer> positions = getPositions(pos);
 		TreeSet<String> keyWords = getKeyWords(query);
@@ -65,23 +58,18 @@ public class ShowDocumentPage extends MainFrame
 		getContent().addChild("<hr/>");
 		int anchorQID = 0;
 		int anchorPID = 0;
-		try (TypeTokenizer tokenizer = new TypeTokenizer(inputStream))
-		{
+		try (TypeTokenizer tokenizer = new TypeTokenizer(inputStream)) {
 			int position = 0;
 			StringBuilder builder = new StringBuilder();
-			for (;;)
-			{
+			for (;;) {
 				String string = tokenizer.getNext();
 				if (string == null)
 					break;
-				if (tokenizer.getStringType() == 1)
-				{
-					if (positions.contains(position) || keyWords.contains(string.toLowerCase()))
-					{
+				if (tokenizer.getStringType() == 1) {
+					if (positions.contains(position) || keyWords.contains(string.toLowerCase())) {
 						if (positions.contains(position))
 							builder.append(new HTMLAnchor("anchorp" + (anchorPID++)));
-						if (keyWords.contains(string.toLowerCase()))
-						{
+						if (keyWords.contains(string.toLowerCase())) {
 							builder.append(new HTMLAnchor("anchorq" + anchorQID));
 							keyWordsDiv.addChild(new HTMLLink("#anchorq" + anchorQID, string));
 							keyWordsDiv.addChild(" ");

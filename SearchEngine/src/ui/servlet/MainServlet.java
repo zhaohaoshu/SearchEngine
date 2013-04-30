@@ -9,12 +9,10 @@ import http.HTTPResponse;
  *
  * @author ZHS
  */
-public class MainServlet implements Servlet
-{
+public class MainServlet implements Servlet {
 
 	@Override
-	public void serve(HTTPRequest request, HTTPResponse response)
-	{
+	public void serve(HTTPRequest request, HTTPResponse response) {
 		MainPage mainPage = new MainPage();
 		ResponseWriter.write(mainPage, response);
 	}

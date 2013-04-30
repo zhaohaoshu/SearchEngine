@@ -7,23 +7,19 @@ import java.io.PrintWriter;
  *
  * @author ZHS
  */
-public class ExpressionNodeOr extends ExpressionNodeBinary
-{
+public class ExpressionNodeOr extends ExpressionNodeBinary {
 
-	public ExpressionNodeOr(ExpressionNode left, ExpressionNode right)
-	{
+	public ExpressionNodeOr(ExpressionNode left, ExpressionNode right) {
 		super(left, right);
 	}
 
 	@Override
-	public boolean getValue()
-	{
+	public boolean getValue() {
 		return getLeft().getValue() || getRight().getValue();
 	}
 
 	@Override
-	public void print(PrintWriter writer)
-	{
+	public void print(PrintWriter writer) {
 		writer.print('(');
 		getLeft().print(writer);
 		writer.print(" | ");

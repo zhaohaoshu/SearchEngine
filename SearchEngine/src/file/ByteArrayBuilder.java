@@ -6,31 +6,26 @@ import java.util.Arrays;
  *
  * @author ZHS
  */
-public class ByteArrayBuilder
-{
+public class ByteArrayBuilder {
 
 	private byte[] bytes;
 	private int length = 0;
 
-	public ByteArrayBuilder()
-	{
+	public ByteArrayBuilder() {
 		bytes = new byte[16];
 	}
 
-	public void append(byte b)
-	{
+	public void append(byte b) {
 		if (length == bytes.length)
 			bytes = Arrays.copyOf(bytes, length * 2);
 		bytes[length++] = b;
 	}
 
-	public int length()
-	{
+	public int length() {
 		return length;
 	}
 
-	public boolean equalsString(String str)
-	{
+	public boolean equalsString(String str) {
 		if (str.length() != length)
 			return false;
 		for (int i = 0; i < length; i++)
@@ -39,19 +34,16 @@ public class ByteArrayBuilder
 		return true;
 	}
 
-	public void clear()
-	{
+	public void clear() {
 		length = 0;
 	}
 
-	public boolean isEmpty()
-	{
+	public boolean isEmpty() {
 		return length == 0;
 	}
 
 	@Override
-	public String toString()
-	{
+	public String toString() {
 		return new String(bytes, 0, length);
 	}
 }

@@ -4,8 +4,7 @@ package searchengine.data;
  *
  * @author ZHS
  */
-public abstract class PostingReader
-{
+public abstract class PostingReader {
 
 	public abstract void moveNext();
 

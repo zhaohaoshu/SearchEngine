@@ -6,8 +6,7 @@ import java.io.InputStream;
  *
  * @author ZHS
  */
-public interface HTTPRequest
-{
+public interface HTTPRequest {
 
 	/**
 	 * Read the content

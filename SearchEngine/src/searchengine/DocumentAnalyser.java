@@ -7,8 +7,7 @@ import java.util.Map;
  *
  * @author ZHS
  */
-public class DocumentAnalyser
-{
+public class DocumentAnalyser {
 
 	/**
 	 * Tokenize the input into map
@@ -17,12 +16,10 @@ public class DocumentAnalyser
 	 * @param map
 	 * @return The number of tokens
 	 */
-	public static int tokenizeDocument(InputStream inputStream, Map<String, Integer> map)
-	{
+	public static int tokenizeDocument(InputStream inputStream, Map<String, Integer> map) {
 		TypeTokenizer tokenizer = new TypeTokenizer(inputStream);
 		int position = 0;
-		for (;;)
-		{
+		for (;;) {
 			String term = tokenizer.getNext(1);
 			if (term == null)
 				break;
@@ -37,11 +34,9 @@ public class DocumentAnalyser
 		return position;
 	}
 
-	public static double calcDocumentLength(Map<String, Integer> map)
-	{
+	public static double calcDocumentLength(Map<String, Integer> map) {
 		double length = 0;
-		for (Map.Entry<String, Integer> entry : map.entrySet())
-		{
+		for (Map.Entry<String, Integer> entry : map.entrySet()) {
 			double tf = 1 + Math.log(entry.getValue());
 			length += tf * tf;
 		}

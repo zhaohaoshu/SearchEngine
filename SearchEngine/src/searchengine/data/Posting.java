@@ -6,8 +6,7 @@ import java.util.ArrayList;
  *
  * @author ZHS
  */
-public class Posting
-{
+public class Posting {
 
 	private long documentID;
 	private int positionCount;
@@ -17,14 +16,12 @@ public class Posting
 	 * @param documentID
 	 * @param positionCount the number of positions
 	 */
-	public Posting(long documentID, int positionCount)
-	{
+	public Posting(long documentID, int positionCount) {
 		this.documentID = documentID;
 		this.positionCount = positionCount;
 	}
 
-	public long getDocumentID()
-	{
+	public long getDocumentID() {
 		return documentID;
 	}
 
@@ -34,14 +31,12 @@ public class Posting
 	 *
 	 * @return
 	 */
-	public int getPositionCount()
-	{
+	public int getPositionCount() {
 		return positionCount;
 	}
 
 	@Override
-	public String toString()
-	{
+	public String toString() {
 		return "{" + documentID + "," + positionCount + '}';
 	}
 }

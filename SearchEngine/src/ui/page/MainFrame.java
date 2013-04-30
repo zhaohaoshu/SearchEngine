@@ -10,13 +10,11 @@ import html.builder.HTMLTableCell;
  *
  * @author ZHS
  */
-public class MainFrame extends HTMLPage
-{
+public class MainFrame extends HTMLPage {
 
 	private HTMLElement content;
 
-	public MainFrame(String title)
-	{
+	public MainFrame(String title) {
 		super(title, "/resource/main.css");
 		HTMLTable table = getBodyElement().addChild(new HTMLTable());
 		table.setAttribute("class", "main");
@@ -26,12 +24,10 @@ public class MainFrame extends HTMLPage
 		cell.addChild("</h1>");
 		HTMLTable tabTable = new HTMLTable();
 		tabTable.setAttribute("class", "title");
-		tabTable.addHeadRow(new HTMLElement[]
-		{
+		tabTable.addHeadRow(new HTMLElement[]{
 			new HTMLLink("/search", "Search"),
-			new HTMLLink("/list", "List all documents"),
-			//new HTMLLink("/add", "Add document"),
-			//new HTMLLink("/about", "About"),
+			new HTMLLink("/list", "List all documents"), //new HTMLLink("/add", "Add document"),
+		//new HTMLLink("/about", "About"),
 		});
 		table.addRow(tabTable);
 		table.addRow("<hr/>");
@@ -39,8 +35,7 @@ public class MainFrame extends HTMLPage
 		content.setAttribute("class", "main");
 	}
 
-	public HTMLElement getContent()
-	{
+	public HTMLElement getContent() {
 		return content;
 	}
 }

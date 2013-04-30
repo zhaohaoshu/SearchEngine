@@ -4,11 +4,9 @@ package ui.page;
  *
  * @author ZHS
  */
-public class MainPage extends MainFrame
-{
+public class MainPage extends MainFrame {
 
-	public MainPage()
-	{
+	public MainPage() {
 		super("ZHS Search Engine");
 		getContent().addChild(
 				"<p>This search engine allow users to upload documents, and retrieve them.</p>");

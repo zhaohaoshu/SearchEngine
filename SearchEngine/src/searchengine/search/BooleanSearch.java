@@ -16,8 +16,7 @@ import searchengine.search.expression.ExpressionNodeToken;
  *
  * @author ZHS
  */
-public class BooleanSearch
-{
+public class BooleanSearch {
 
 	private static final int OP_L = 2;
 	private static final int OP_R = 3;
@@ -25,12 +24,10 @@ public class BooleanSearch
 	private static final int OP_AND = 5;
 	private static final int OP_NOT = 6;
 
-	private static void addOP(LinkedList<ExpressionNode> nodeStack, LinkedList<Integer> opStack, int type)
-	{
+	private static void addOP(LinkedList<ExpressionNode> nodeStack, LinkedList<Integer> opStack, int type) {
 
 		while (!opStack.isEmpty() && opStack.peekFirst().intValue() >= type)
-			switch (opStack.pollFirst().intValue())
-			{
+			switch (opStack.pollFirst().intValue()) {
 				case OP_NOT:
 					nodeStack.addFirst(new ExpressionNodeNot(nodeStack.pollFirst()));
 					break;
@@ -48,13 +45,11 @@ public class BooleanSearch
 			TypeTokenizer tokenizer,
 			SearchDataManager manager,
 			ArrayList<Boolean> values,
-			ArrayList<PostingReader> readers)
-	{
+			ArrayList<PostingReader> readers) {
 		LinkedList<ExpressionNode> nodeStack = new LinkedList<>();
 		LinkedList<Integer> opStack = new LinkedList<>();
 		boolean needOP = false;
-		for (;;)
-		{
+		for (;;) {
 			String token = tokenizer.getNext();
 			int type = tokenizer.getStringType();
 			if (type <= 0 || type == OP_R)
@@ -64,8 +59,7 @@ public class BooleanSearch
 			if (needOP && !(type == OP_OR || type == OP_AND))
 				addOP(nodeStack, opStack, OP_AND);
 			needOP = !(type == OP_OR || type == OP_AND || type == OP_NOT);
-			switch (type)
-			{
+			switch (type) {
 				case 1:
 					readers.add(manager.getPostingReader(token.toLowerCase()));
 					nodeStack.addFirst(new ExpressionNodeToken(values, values.size()));
@@ -87,11 +81,9 @@ public class BooleanSearch
 
 	public static void booleanSearch(
 			String queryString, SearchDataManager manager,
-			BooleanSearchResultWriter writer)
-	{
+			BooleanSearchResultWriter writer) {
 		TypeTokenizer tokenizer = new TypeTokenizer(queryString);
-		tokenizer.addTypes(new char[]
-		{
+		tokenizer.addTypes(new char[]{
 			'(', ')', '|', '&', '!'
 		});
 
@@ -102,20 +94,17 @@ public class BooleanSearch
 
 		int queryCount = readers.size();
 		Posting[] postings = new Posting[queryCount];
-		for (int i = 0; i < queryCount; i++)
-		{
+		for (int i = 0; i < queryCount; i++) {
 			postings[i] = readers.get(i).read();
 			readers.get(i).moveNext();
 		}
 
-		for (;;)
-		{
+		for (;;) {
 			long id = Common.getMinID(postings);
 			if (id < 0)
 				break;
 			for (int i = 0; i < queryCount; i++)
-				if (postings[i] != null && postings[i].getDocumentID() == id)
-				{
+				if (postings[i] != null && postings[i].getDocumentID() == id) {
 					values.set(i, true);
 					postings[i] = readers.get(i).read();
 					readers.get(i).moveNext();
@@ -127,8 +116,7 @@ public class BooleanSearch
 		}
 	}
 
-	public static abstract interface BooleanSearchResultWriter
-	{
+	public static abstract interface BooleanSearchResultWriter {
 
 		public abstract void writeBooleanExpression(ExpressionNode expression);
 

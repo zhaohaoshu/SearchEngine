@@ -6,21 +6,17 @@ import html.HTMLElement;
  *
  * @author ZHS
  */
-public class HTMLTableCell extends HTMLElement
-{
+public class HTMLTableCell extends HTMLElement {
 
-	public HTMLTableCell()
-	{
+	public HTMLTableCell() {
 		super("td");
 	}
 
-	public HTMLTableCell(boolean head)
-	{
+	public HTMLTableCell(boolean head) {
 		super(head ? "th" : "td");
 	}
 
-	public HTMLTableCell(int colspan, int rowspan)
-	{
+	public HTMLTableCell(int colspan, int rowspan) {
 		super("td");
 		setAttribute("colspan", colspan);
 		setAttribute("rowspan", rowspan);

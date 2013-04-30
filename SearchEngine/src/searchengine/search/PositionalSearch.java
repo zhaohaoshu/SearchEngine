@@ -12,27 +12,23 @@ import searchengine.data.SearchDataManager;
  *
  * @author ZHS
  */
-public class PositionalSearch
-{
+public class PositionalSearch {
 
 	private static void merge(
 			LinkedList<int[]> results,
 			int[] pointers,
 			int[][] positions,
 			ArrayList<Integer> distances,
-			int count)
-	{
+			int count) {
 		while (pointers[count] < positions[count].length &&
 				(count == 0 ||
 				positions[count - 1][pointers[count - 1]] + distances.get(count - 1) >=
-				positions[count][pointers[count]]))
-		{
+				positions[count][pointers[count]])) {
 			if (count == 0 ||
 					positions[count][pointers[count]] > positions[count - 1][pointers[count - 1]])
 				if (count < positions.length - 1)
 					merge(results, pointers, positions, distances, count + 1);
-				else
-				{
+				else {
 					int[] result = new int[positions.length];
 					for (int i = 0; i < positions.length; i++)
 						result[i] = positions[i][pointers[i]];
@@ -49,25 +45,21 @@ public class PositionalSearch
 
 	public static void positionalSearch(
 			String queryString, SearchDataManager manager,
-			PositionalSearchResultWriter writer)
-	{
+			PositionalSearchResultWriter writer) {
 		TypeTokenizer tokenizer = new TypeTokenizer(queryString);
-		tokenizer.addTypes(new String[]
-		{
+		tokenizer.addTypes(new String[]{
 			"/", "0123456789"
 		});
 		ArrayList<PostingReader> readers = new ArrayList<>();
 		ArrayList<Integer> distances = new ArrayList<>();
 		int defaultDistance = 1;
 		boolean needNumber = false;
-		for (;;)
-		{
+		for (;;) {
 			String token = tokenizer.getNext();
 			int type = tokenizer.getStringType();
 			if (type <= 0)
 				break;
-			switch (type)
-			{
+			switch (type) {
 				case 1://token
 					if (readers.size() > distances.size())
 						distances.add(defaultDistance);
@@ -75,8 +67,7 @@ public class PositionalSearch
 					//readers.add(null);
 					break;
 				case 3://0123456789
-					if (needNumber)
-					{
+					if (needNumber) {
 						int distance = Integer.parseInt(token);
 						if (readers.isEmpty())
 							defaultDistance = distance;
@@ -94,8 +85,7 @@ public class PositionalSearch
 			postings[i] = readers.get(i).read();
 
 		int[][] positions = new int[queryCount][];
-		for (;;)
-		{
+		for (;;) {
 			long id = Common.getMinID(postings);
 			if (id < 0)
 				break;
@@ -103,8 +93,7 @@ public class PositionalSearch
 			for (int i = 0; i < queryCount; i++)
 				if (postings[i] == null || postings[i].getDocumentID() != id)
 					flag = false;
-			if (flag)
-			{
+			if (flag) {
 //				for (int i = 0; i < queryCount; i++)
 //					positions[i] = readers.get(i).read().getPositions();
 				LinkedList<int[]> results = new LinkedList<>();
@@ -113,16 +102,14 @@ public class PositionalSearch
 					writer.write(id, results);
 			}
 			for (int i = 0; i < queryCount; i++)
-				if (postings[i] != null && postings[i].getDocumentID() == id)
-				{
+				if (postings[i] != null && postings[i].getDocumentID() == id) {
 					readers.get(i).moveNext();
 					postings[i] = readers.get(i).read();
 				}
 		}
 	}
 
-	public abstract static class PositionalSearchResultWriter
-	{
+	public abstract static class PositionalSearchResultWriter {
 
 		public abstract void write(long documentID, List<int[]> results);
 	}

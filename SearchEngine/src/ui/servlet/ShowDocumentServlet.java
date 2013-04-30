@@ -14,35 +14,28 @@ import http.HTTPResponse;
  *
  * @author ZHS
  */
-public class ShowDocumentServlet implements Servlet
-{
+public class ShowDocumentServlet implements Servlet {
 
 	private FileSearchDataManager manager;
 
-	public ShowDocumentServlet(FileSearchDataManager manager)
-	{
+	public ShowDocumentServlet(FileSearchDataManager manager) {
 		this.manager = manager;
 	}
 
 	@Override
-	public void serve(HTTPRequest request, HTTPResponse response)
-	{
+	public void serve(HTTPRequest request, HTTPResponse response) {
 		long id = 0;
-		try
-		{
+		try {
 			id = Long.parseLong(request.getParameter("id"));
 		}
-		catch (NumberFormatException ex)
-		{
+		catch (NumberFormatException ex) {
 		}
 		FileDocumentInfo info = manager.getDocumentInfo(id);
-		if (info == null)
-		{
+		if (info == null) {
 			response.setRedirect("/list");
 			return;
 		}
-		if ("download".equals(request.getParameter("download")))
-		{
+		if ("download".equals(request.getParameter("download"))) {
 			response.serveFile(manager.getDocumentInputStream(info),
 					info.getName(), "application/octet-stream");
 			return;

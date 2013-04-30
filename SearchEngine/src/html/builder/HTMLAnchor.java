@@ -6,11 +6,9 @@ import html.HTMLElement;
  *
  * @author ZHS
  */
-public class HTMLAnchor extends HTMLElement
-{
+public class HTMLAnchor extends HTMLElement {
 
-	public HTMLAnchor(String id)
-	{
+	public HTMLAnchor(String id) {
 		super("a");
 		setAttribute("id", id);
 		addChild("");

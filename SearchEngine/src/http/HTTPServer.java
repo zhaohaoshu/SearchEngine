@@ -16,99 +16,80 @@ import java.util.logging.Logger;
  *
  * @author ZHS
  */
-public class HTTPServer
-{
+public class HTTPServer {
 
 	private int port;
 	private RequestDeliver deliver;
 	private HTTPThread httpThread = null;
 	private boolean stop = false;
 
-	public HTTPServer(int port, RequestDeliver deliver)
-	{
+	public HTTPServer(int port, RequestDeliver deliver) {
 		this.port = port;
 		this.deliver = deliver;
 	}
 
-	public void start()
-	{
-		if (httpThread == null)
-		{
+	public void start() {
+		if (httpThread == null) {
 			httpThread = new HTTPThread();
 			httpThread.start();
 		}
 	}
 
-	public void stop()
-	{
+	public void stop() {
 		stop = true;
 		httpThread.closeServerSocket();
 	}
 
-	private class HTTPThread extends Thread
-	{
+	private class HTTPThread extends Thread {
 
 		private ServerSocket serverSocket;
 
-		private void closeServerSocket()
-		{
-			try
-			{
+		private void closeServerSocket() {
+			try {
 				if (serverSocket != null)
 					serverSocket.close();
 			}
-			catch (IOException ex)
-			{
+			catch (IOException ex) {
 				Logger.getLogger(HTTPServer.class.getName()).log(Level.SEVERE, null, ex);
 			}
 		}
 
 		@Override
-		public void run()
-		{
-			try
-			{
+		public void run() {
+			try {
 				serverSocket = new ServerSocket(port);
-				while (!stop)
-				{
+				while (!stop) {
 					Socket socket = serverSocket.accept();
 					ResponseThread responseThread = new ResponseThread(socket);
 					responseThread.start();
 				}
 				serverSocket.close();
 			}
-			catch (IOException ex)
-			{
+			catch (IOException ex) {
 			}
 		}
 	}
 
-	private class ResponseThread extends Thread
-	{
+	private class ResponseThread extends Thread {
 
 		private Socket socket;
 
-		public ResponseThread(Socket socket)
-		{
+		public ResponseThread(Socket socket) {
 			this.socket = socket;
 		}
 
 		@Override
-		public void run()
-		{
-			try (InputStream inputStream = socket.getInputStream(); OutputStream outputStream = socket.getOutputStream();)
-			{
+		public void run() {
+			try (InputStream inputStream = socket.getInputStream(); OutputStream outputStream = socket.getOutputStream();) {
 				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 				String requestLine = bufferedReader.readLine();
 				System.out.println(requestLine);
-				if (requestLine != null)
-				{
+				if (requestLine != null) {
 					StringTokenizer tokenizer = new StringTokenizer(requestLine);
 					String method = tokenizer.nextToken();
 					String requestURL = tokenizer.nextToken();
 					TreeMap<String, String> headers = new TreeMap<>();
-					for (;;)
-					{
+					for (;;) {
 						String headerLine = bufferedReader.readLine();
 						if (headerLine == null || headerLine.isEmpty())
 							break;
@@ -124,8 +105,7 @@ public class HTTPServer
 					response.write();
 				}
 			}
-			catch (IOException ex)
-			{
+			catch (IOException ex) {
 				Logger.getLogger(HTTPServer.class.getName()).log(Level.SEVERE, null, ex);
 			}
 		}

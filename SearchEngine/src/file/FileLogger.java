@@ -14,30 +14,24 @@ import java.util.logging.Logger;
  *
  * @author ZHS
  */
-public class FileLogger
-{
+public class FileLogger {
 
 	private static DateFormat dateFormat = DateFormat.getTimeInstance();
 	private static PrintWriter writer;
 
-	static
-	{
-		try
-		{
+	static {
+		try {
 			writer = new PrintWriter(new FileWriter(new File("message.txt")), true);
 		}
-		catch (FileNotFoundException ex)
-		{
+		catch (FileNotFoundException ex) {
 			Logger.getLogger(FileLogger.class.getName()).log(Level.SEVERE, null, ex);
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(FileLogger.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}
 
-	public static void log(String message)
-	{
+	public static void log(String message) {
 		String out = "(" + dateFormat.format(Calendar.getInstance().getTime()) + ")" +
 				message;
 		System.out.println(out);

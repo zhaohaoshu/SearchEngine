@@ -6,23 +6,19 @@ import html.HTMLElement;
  *
  * @author ZHS
  */
-public class HTMLFormInputFile extends HTMLElement
-{
+public class HTMLFormInputFile extends HTMLElement {
 
-	public HTMLFormInputFile()
-	{
+	public HTMLFormInputFile() {
 		super("input");
 	}
 
-	public HTMLFormInputFile(String name)
-	{
+	public HTMLFormInputFile(String name) {
 		super("input");
 		setAttribute("type", "file");
 		setAttribute("name", name);
 	}
 
-	public HTMLFormInputFile(String name, boolean multiple)
-	{
+	public HTMLFormInputFile(String name, boolean multiple) {
 		super("input");
 		setAttribute("type", "file");
 		setAttribute("name", name);

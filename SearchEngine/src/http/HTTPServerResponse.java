@@ -13,8 +13,7 @@ import java.util.logging.Logger;
  *
  * @author ZHS
  */
-public class HTTPServerResponse extends HTTPResponse
-{
+public class HTTPServerResponse extends HTTPResponse {
 
 	private int status;
 	private String statusMessage;
@@ -23,8 +22,7 @@ public class HTTPServerResponse extends HTTPResponse
 	private PrintWriter contentWriter;
 	private OutputStream socketStream;
 
-	public HTTPServerResponse(OutputStream socketStream)
-	{
+	public HTTPServerResponse(OutputStream socketStream) {
 		status = 200;
 		statusMessage = "OK";
 		headers = new TreeMap<>();
@@ -34,48 +32,40 @@ public class HTTPServerResponse extends HTTPResponse
 	}
 
 	@Override
-	public void setStatus(int status)
-	{
+	public void setStatus(int status) {
 		this.status = status;
 	}
 
 	@Override
-	public void setStatusMessage(String statusMessage)
-	{
+	public void setStatusMessage(String statusMessage) {
 		this.statusMessage = statusMessage;
 	}
 
 	@Override
-	public void setHeader(String name, Object value)
-	{
+	public void setHeader(String name, Object value) {
 		headers.put(name, value.toString());
 	}
 
 	@Override
-	public ByteArrayOutputStream getContentStream()
-	{
+	public ByteArrayOutputStream getContentStream() {
 		return contentStream;
 	}
 
 	@Override
-	public PrintWriter getContentWriter()
-	{
+	public PrintWriter getContentWriter() {
 		return contentWriter;
 	}
 
-	public void write()
-	{
+	public void write() {
 		PrintWriter printWriter = new PrintWriter(socketStream, true);
 		printWriter.println("HTTP/1.1 " + status + " " + statusMessage);
 		for (Map.Entry<String, String> entry : headers.entrySet())
 			printWriter.println(entry.getKey() + ": " + entry.getValue());
 		printWriter.println();
-		try
-		{
+		try {
 			contentStream.writeTo(socketStream);
 		}
-		catch (IOException ex)
-		{
+		catch (IOException ex) {
 			Logger.getLogger(HTTPServerResponse.class.getName()).log(Level.SEVERE, null, ex);
 		}
 	}

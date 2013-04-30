@@ -11,19 +11,16 @@ import ui.page.ListDocumentPage;
  *
  * @author ZHS
  */
-public class ListDocumentServlet implements Servlet
-{
+public class ListDocumentServlet implements Servlet {
 
 	private FileSearchDataManager manager;
 
-	public ListDocumentServlet(FileSearchDataManager manager)
-	{
+	public ListDocumentServlet(FileSearchDataManager manager) {
 		this.manager = manager;
 	}
 
 	@Override
-	public void serve(HTTPRequest request, HTTPResponse response)
-	{
+	public void serve(HTTPRequest request, HTTPResponse response) {
 		long count = manager.getDocumentCount();
 		LinkedList<DocumentInfo> infos = new LinkedList<>();
 		for (int i = 1; i <= count; i++)
