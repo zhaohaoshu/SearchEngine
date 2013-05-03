@@ -37,8 +37,8 @@ public class DocumentManager implements Closeable {
 			currentDocumentID = byteBuffer.getLong();
 		}
 		documentChannel = (new RandomAccessFile(documentFile, mode)).getChannel();
-		documentBuffer = ByteBuffer.allocate(8192);
-		indexBuffer = ByteBuffer.allocate(8192);
+		documentBuffer = ByteBuffer.allocate(16384);
+		indexBuffer = ByteBuffer.allocate(16384);
 	}
 
 	public void flush() throws IOException {

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
@@ -64,13 +65,19 @@ public class PostingManager implements Closeable {
 				(flushStartTime - lastTime) / documentCount + ")");
 
 		addPostingTreeNode(postingTree.root);
-		ByteBuffer byteBuffer = ByteBuffer.allocate(postingTree.appendIndexNodes.size() * IndexNode.SIZE);
-		for (IndexNode appendIndexNode : postingTree.appendIndexNodes)
-			byteBuffer.put(appendIndexNode.buffer);
+		ByteBuffer[] byteBuffers = new ByteBuffer[postingTree.appendIndexNodes.size()];
+		int i = 0;
+		for (IndexNode indexNode : postingTree.appendIndexNodes) {
+			byteBuffers[i] = indexNode.buffer;
+			byteBuffers[i].rewind();
+			i++;
+		}
 		indexChannel.position(indexChannel.size());
-		byteBuffer.rewind();
-		while (byteBuffer.hasRemaining())
-			indexChannel.write(byteBuffer);
+		long offset = 0;
+		while (offset < byteBuffers.length * IndexNode.SIZE) {
+			int offsetIndex = (int) (offset / IndexNode.SIZE);
+			offset += indexChannel.write(byteBuffers, offsetIndex, byteBuffers.length - offsetIndex);
+		}
 		postingTree.clear();
 
 		long time = Calendar.getInstance().getTimeInMillis();
@@ -90,9 +97,16 @@ public class PostingManager implements Closeable {
 			if (indexNode.readFirstPostingPointer() < 0)
 				indexNode.writeFirstPostingPointer(postingChannel.size());
 			else {
-				PostingNode tailPostingNode = indexNode.getTailPostingNode();
-				tailPostingNode.writeNextPointer(postingChannel.size());
-				tailPostingNode.save();
+				long tailPostingPointer = indexNode.readTailPostingPointer();
+				ByteBuffer byteBuffer = ByteBuffer.allocate(8);
+				byteBuffer.putLong(postingChannel.size());
+				byteBuffer.flip();
+				postingChannel.position(tailPostingPointer);
+				while (byteBuffer.hasRemaining())
+					postingChannel.write(byteBuffer);
+//				PostingNode tailPostingNode = indexNode.getTailPostingNode();
+//				tailPostingNode.writeNextPointer(postingChannel.size());
+//				tailPostingNode.save();
 			}
 			indexNode.writePostingCount(indexNode.readPostingCount() + postings.size());
 			indexNode.writeTailPostingPointer(postingChannel.size() + PostingNode.SIZE * (postings.size() - 1));
@@ -352,14 +366,14 @@ public class PostingManager implements Closeable {
 		PostingTree() throws IOException {
 			root = new TreeNode(0);
 			currentPostingCount = 0;
-			appendIndexNodes = new LinkedList<>();
+			appendIndexNodes = new ArrayList<>();
 			appendOffset = indexChannel.size();
 		}
 
 		void clear() throws IOException {
 			root = new TreeNode(0);
 			currentPostingCount = 0;
-			appendIndexNodes = new LinkedList<>();
+			appendIndexNodes.clear();
 			appendOffset = indexChannel.size();
 		}
 
@@ -371,16 +385,15 @@ public class PostingManager implements Closeable {
 				if (p.children[index] == null) {
 					if (!p.isAppend) {
 						long childPointer = p.indexNode.readChildPointer(index);
-						if (childPointer >= 0)
-							p.children[index] = new TreeNode(childPointer);
-						else
-							p.isModified = true;
+						if (childPointer >= 0) {
+							p = (p.children[index] = new TreeNode(childPointer));
+							continue;
+						}
+						p.isModified = true;
 					}
-					if (p.children[index] == null) {
-						TreeNode child = new TreeNode();
-						p.children[index] = child;
-						p.indexNode.writeChildPointer(index, child.indexNode.base);
-					}
+					TreeNode child = new TreeNode();
+					p.children[index] = child;
+					p.indexNode.writeChildPointer(index, child.indexNode.base);
 				}
 				p = p.children[index];
 			}

@@ -24,6 +24,9 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 	private DocumentManager documentManager;
 	private PostingManager postingManager;
 	private File documentDirFile;
+	private int maxTermLength = 50;
+	private int maxNameLength = 100;
+	private int maxURLLength = 100;
 
 	public FileSearchDataManager(File documentDirFile, File dictionaryDirFile, String mode) {
 		try {
@@ -86,18 +89,24 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 						map = new TreeMap<>();
 						bodyStart = reader.getOffset();
 						while ((read = reader.read()) != 30)
-							if ('a' <= read && read <= 'z')
-								builder.append((byte) read);
-							else if ('A' <= read && read <= 'Z')
-								builder.append((byte) (read - 'A' + 'a'));
+							if ('a' <= read && read <= 'z') {
+								if (builder.length() <= maxTermLength)
+									builder.append((byte) read);
+							}
+							else if ('A' <= read && read <= 'Z') {
+								if (builder.length() <= maxTermLength)
+									builder.append((byte) (read - 'A' + 'a'));
+							}
 							else if (!builder.isEmpty())//not a letter
 							{
-								String term = builder.toString();
-								Integer positionCount = map.get(term);
-								if (positionCount == null)
-									map.put(term, 1);
-								else
-									map.put(term, positionCount + 1);
+								if (builder.length() <= maxTermLength) {
+									String term = builder.toString();
+									Integer positionCount = map.get(term);
+									if (positionCount == null)
+										map.put(term, 1);
+									else
+										map.put(term, positionCount + 1);
+								}
 								builder.clear();
 							}
 						bodyEnd = reader.getOffset();
@@ -105,14 +114,22 @@ public class FileSearchDataManager extends SearchDataManager<FileDocumentInfo, F
 					else if (builder.equalsString("title")) {
 						builder.clear();
 						while ((read = reader.read()) != 30)
-							builder.append((byte) read);
-						title = builder.toString();
+							if (builder.length() <= maxNameLength)
+								builder.append((byte) read);
+						if (builder.length() <= maxNameLength)
+							title = builder.toString();
+						else
+							title = "Too long";
 					}
 					else if (builder.equalsString("url")) {
 						builder.clear();
 						while ((read = reader.read()) != 30)
-							builder.append((byte) read);
-						url = builder.toString();
+							if (builder.length() <= maxURLLength)
+								builder.append((byte) read);
+						if (builder.length() <= maxURLLength)
+							url = builder.toString();
+						else
+							url = "(Too long)";
 					}
 					else
 						while (reader.read() != 30);

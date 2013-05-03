@@ -4,9 +4,7 @@ import file.FilePostingReader;
 import java.io.File;
 import java.util.Scanner;
 import file.FileSearchDataManager;
-import file.OffsetReader;
 import http.HTTPServer;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -37,6 +35,7 @@ public class Main {
 
 	private static void excute(LinkedList<String> argList) {
 		switch (argList.poll()) {
+			case "l":
 			case "loaddir": {
 				if (argList.size() < 1) {
 					printUsage();
@@ -56,6 +55,7 @@ public class Main {
 				}
 			}
 			break;
+			case "s":
 			case "httpserver": {
 				if (argList.size() < 2) {
 					printUsage();
@@ -73,7 +73,9 @@ public class Main {
 				}
 			}
 			break;
-			case "post": {
+			case "p":
+			case "post":
+			case "posting": {
 				try (FileSearchDataManager manager = new FileSearchDataManager(
 						documentDirFile, dictionaryDirFile, "r")) {
 					Scanner scanner = new Scanner(System.in);
@@ -96,7 +98,9 @@ public class Main {
 				}
 			}
 			break;
-			case "doc": {
+			case "d":
+			case "doc":
+			case "document": {
 				try (FileSearchDataManager manager = new FileSearchDataManager(
 						documentDirFile, dictionaryDirFile, "r")) {
 					Scanner scanner = new Scanner(System.in);
@@ -110,6 +114,7 @@ public class Main {
 				}
 			}
 			break;
+			case "cmd":
 			case "cmdline": {
 				Scanner scanner = new Scanner(System.in);
 				for (;;) {
@@ -125,6 +130,7 @@ public class Main {
 				}
 			}
 			break;
+			case "clr":
 			case "clear": {
 				for (File file : dictionaryDirFile.listFiles())
 					file.delete();
@@ -141,23 +147,6 @@ public class Main {
 	}
 
 	private static void testCode() {
-		try {
-			OffsetReader reader = new OffsetReader(new File(documentDirFile, "../index_00000.txt"));
-			int read;
-			long len = 0;
-			while ((read = reader.read()) >= 0) {
-				len++;
-				if (len == 7058)
-					len = 7058;
-			}
-			System.out.println("len: " + len);
-		}
-		catch (FileNotFoundException ex) {
-			Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-		}
-		catch (IOException ex) {
-			Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-		}
 	}
 
 	public static void main(String[] args) {
@@ -167,6 +156,8 @@ public class Main {
 			return;
 		}
 		dictionaryDirFile = new File(argList.poll());
+		if (!dictionaryDirFile.exists())
+			dictionaryDirFile.mkdir();
 		documentDirFile = new File(argList.poll());
 		excute(argList);
 	}
