@@ -23,6 +23,8 @@ public class DocumentInfo {
 	}
 
 	public String getName() {
+		if (name.isEmpty())
+			return "(empty)";
 		return name;
 	}
 
@@ -31,6 +33,8 @@ public class DocumentInfo {
 	}
 
 	public String getUrl() {
+		if (url.isEmpty())
+			return "(empty)";
 		return url;
 	}
 }

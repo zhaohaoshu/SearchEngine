@@ -12,12 +12,14 @@ import http.RequestDeliver;
  */
 public class ServletRequestDeliver implements RequestDeliver {
 
-	private File servetPathFile;
-	private FileSearchDataManager manager;
+	private File dictionaryDirFile;
+	private File documentDirFile;
+	private File servetDirFile;
 
-	public ServletRequestDeliver(File servetPathFile, FileSearchDataManager manager) {
-		this.servetPathFile = servetPathFile;
-		this.manager = manager;
+	public ServletRequestDeliver(File dictionaryDirFile, File documentDirFile, File servetDirFile) {
+		this.dictionaryDirFile = dictionaryDirFile;
+		this.documentDirFile = documentDirFile;
+		this.servetDirFile = servetDirFile;
 	}
 
 	@Override
@@ -25,23 +27,34 @@ public class ServletRequestDeliver implements RequestDeliver {
 		Servlet servlet;
 		String url = request.getURL();
 		if (url.startsWith("/resource"))
-			response.serveFile(new File(servetPathFile, url));
-		else {
+			response.serveFile(new File(servetDirFile, url));
+		else
 			switch (url) {
 				case "/search":
-					servlet = new SearchServlet(manager);
+					try (FileSearchDataManager manager = new FileSearchDataManager(
+							documentDirFile, dictionaryDirFile, "r")) {
+						servlet = new SearchServlet(manager);
+						servlet.serve(request, response);
+					}
 					break;
 				case "/show":
-					servlet = new ShowDocumentServlet(manager);
+					try (FileSearchDataManager manager = new FileSearchDataManager(
+							documentDirFile, dictionaryDirFile, "r")) {
+						servlet = new ShowDocumentServlet(manager);
+						servlet.serve(request, response);
+					}
 					break;
 				case "/list":
-					servlet = new ListDocumentServlet(manager);
+					try (FileSearchDataManager manager = new FileSearchDataManager(
+							documentDirFile, dictionaryDirFile, "r")) {
+						servlet = new ListDocumentServlet(manager);
+						servlet.serve(request, response);
+					}
 					break;
 				default:
 					servlet = new MainServlet();
+					servlet.serve(request, response);
 					break;
 			}
-			servlet.serve(request, response);
-		}
 	}
 }

@@ -21,14 +21,24 @@ public class ListDocumentServlet implements Servlet {
 
 	@Override
 	public void serve(HTTPRequest request, HTTPResponse response) {
+		long page;
+		try {
+			page = Long.parseLong(request.getParameter("page"));
+		}
+		catch (NumberFormatException ex) {
+			page = 1;
+		}
 		long count = manager.getDocumentCount();
+		int countPerPage = 30;
+		long pageCount = (count + countPerPage - 1) / countPerPage;
+		if (page > pageCount)
+			page = pageCount;
 		LinkedList<DocumentInfo> infos = new LinkedList<>();
-		for (int i = 1; i <= count; i++)
+		long startID = countPerPage * (page - 1) + 1;
+		long endID = Math.min(count, startID + countPerPage - 1);
+		for (long i = startID; i <= endID; i++)
 			infos.add(manager.getDocumentInfo(i));
-		boolean appendInfo = false;
-		if (request.getParameter("append") != null)
-			appendInfo = true;
-		ListDocumentPage listDocumentPage = new ListDocumentPage(infos, appendInfo);
+		ListDocumentPage listDocumentPage = new ListDocumentPage(infos, pageCount, page);
 		ResponseWriter.write(listDocumentPage, response);
 	}
 }

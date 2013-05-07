@@ -11,7 +11,6 @@ import java.util.LinkedList;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import searchengine.data.Posting;
 import ui.servlet.ServletRequestDeliver;
 
 /**
@@ -63,14 +62,12 @@ public class Main {
 				}
 				File serverDirFile = new File(argList.poll());
 				int port = Integer.parseInt(argList.poll());
-				try (FileSearchDataManager manager = new FileSearchDataManager(
-						documentDirFile, dictionaryDirFile, "r")) {
-					HTTPServer server = new HTTPServer(port, new ServletRequestDeliver(serverDirFile, manager));
-					server.start();
-					Scanner scanner = new Scanner(System.in);
-					scanner.nextLine();
-					server.stop();
-				}
+				HTTPServer server = new HTTPServer(port,
+						new ServletRequestDeliver(dictionaryDirFile, documentDirFile, serverDirFile));
+				server.start();
+				Scanner scanner = new Scanner(System.in);
+				scanner.nextLine();
+				server.stop();
 			}
 			break;
 			case "p":
@@ -86,14 +83,14 @@ public class Main {
 							break;
 						FilePostingReader reader = manager.getPostingReader(nextLine.toLowerCase());
 						System.out.println("\tcount: " + reader.getCount());
-						for (;;) {
-							Posting posting = reader.read();
-							if (posting == null)
-								break;
-							System.out.println("\t\t" + posting);
-							reader.moveNext();
-						}
-						System.out.println("\tcount: " + reader.getCount());
+//						for (;;) {
+//							Posting posting = reader.read();
+//							if (posting == null)
+//								break;
+//							System.out.println("\t\t" + posting);
+//							reader.moveNext();
+//						}
+//						System.out.println("\tcount: " + reader.getCount());
 					}
 				}
 			}
